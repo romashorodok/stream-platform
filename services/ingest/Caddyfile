@@ -1,0 +1,19 @@
+localhost {
+	file_server browse
+
+	@options {
+		method OPTIONS
+	}
+
+	header {
+		Access-Control-Allow-Origin *
+		Access-Control-Allow-Credentials true
+		Cache-Control no-cache
+		Access-Control-Allow-Methods *
+		Access-Control-Allow-Headers *
+		Access-Control-Expose-Headers Range,Content-Range
+		defer
+	}
+
+	respond @options 200
+}
