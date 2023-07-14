@@ -6,6 +6,7 @@ import (
 
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/api/consumer/whip"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
 )
 
 func populateMediaEngine(m *webrtc.MediaEngine) error {
@@ -100,7 +101,9 @@ func main() {
 
 	Configure()
 
-	var whip = whip.NewHandler(webrtcAPI)
+	orchestrator := orchestrator.NewOrchestrator()
+
+	var whip = whip.NewHandler(orchestrator, webrtcAPI)
 
 	mux.HandleFunc("/api/consumer/whip", whip.Handler)
 
