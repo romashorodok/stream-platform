@@ -2,55 +2,69 @@ package mediaprocessor
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
+
+	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
+	"github.com/romashorodok/stream-platform/services/ingest/pkg/namedpipe"
 )
 
 type HSLMediaProcessor struct {
+	orchestrator.MediaProcessor
 }
 
-func (HSLMediaProcessor) Transcode(mediaSourcePipe *io.PipeReader) error {
+func (HSLMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, audioSourcePipe *io.PipeReader) (err error) {
+
 	ffmpeg := exec.Command("ffmpeg",
-		"-f", "lavfi", "-re",
-		"-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+		"-fflags", "nobuffer",
+		"-threads", "0",
+		"-re",
 		"-i", "pipe:0",
-		"-c:a", "aac",
-		"-loglevel", "debug",
+		"-i", "pipe:3",
+		"-loglevel", "info",
 		"-c:v", "libx264",
 		"-preset", "ultrafast",
+		"-tune", "zerolatency",
 		"-crf", "30",
 		"-maxrate", "3000k",
 		"-bufsize", "6000k",
 		"-pix_fmt", "yuv420p",
-		"-an",
+		"-c:a", "libopus",
 		"-f", "hls",
 		"-hls_time", "8",
 		"-hls_list_size", "4",
 		"-hls_flags", "delete_segments",
 		"-hls_start_number_source", "datetime",
 		"-hls_segment_filename", "output_%03d.ts",
-		"output.m3u8")
+		"output.m3u8",
+	)
 
-	stdin, _ := ffmpeg.StdinPipe()
-	stderr, _ := ffmpeg.StderrPipe()
+	ffmpeg.Stdin = videoSourcePipe
+
+	audioPipe, err := namedpipe.NewNamedPipe()
+	audioPipeFile, err := audioPipe.OpenAsWriteOnly()
+
+	videoStderr, err := ffmpeg.StderrPipe()
+
+	if err != nil {
+		log.Println("Failed to open pipes. Err", err)
+	}
+
+	ffmpeg.ExtraFiles = []*os.File{audioPipeFile}
 
 	go func() {
-		scanner := bufio.NewScanner(stderr)
+		defer audioPipe.Close()
 
-		for scanner.Scan() {
-			fmt.Println(scanner.Text())
-		}
+		io.Copy(audioPipeFile, audioSourcePipe)
 	}()
 
 	go func() {
-		defer func() {
-			log.Println("Close ffmpeg pipe")
-			stdin.Close()
-		}()
-
-		io.Copy(stdin, mediaSourcePipe)
+		scanner := bufio.NewScanner(videoStderr)
+		for scanner.Scan() {
+			log.Println("[HLS]", scanner.Text())
+		}
 	}()
 
 	if err := ffmpeg.Run(); err != nil {

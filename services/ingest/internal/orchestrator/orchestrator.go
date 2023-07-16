@@ -8,7 +8,7 @@ import (
 )
 
 type MediaProcessor interface {
-	Transcode(mediaSourcePipe *io.PipeReader) error
+	Transcode(videoSourcePipe *io.PipeReader, audioSourcePipe *io.PipeReader) error
 }
 
 type Control interface {
@@ -16,29 +16,42 @@ type Control interface {
 	GetMediaProcessors() []MediaProcessor
 }
 
-type Stream struct {
+type VideoStream struct {
 	PipeReader *io.PipeReader
 	PipeWriter *io.PipeWriter
+}
+
+type AudioStream struct {
+	PipeReader *io.PipeReader
+	PipeWriter *io.PipeWriter
+}
+
+type Stream struct {
+	Video *VideoStream
+	Audio *AudioStream
 }
 
 type Orchestrator struct {
 	Name      string
 	IsRunning bool
 
-	Stream            *Stream
+	stream            *Stream
 	controls          map[string]Control
 	orchestratorMutex sync.Mutex
 }
 
 func NewOrchestrator() *Orchestrator {
-	o := &Orchestrator{}
-	o.controls = make(map[string]Control)
+	videoReader, videoWriter := io.Pipe()
+	audioReader, audioWriter := io.Pipe()
 
-	pipeReader, pipeWriter := io.Pipe()
-	o.Stream = &Stream{
-		PipeReader: pipeReader,
-		PipeWriter: pipeWriter,
+	o := &Orchestrator{
+		stream: &Stream{
+			Video: &VideoStream{PipeReader: videoReader, PipeWriter: videoWriter},
+			Audio: &AudioStream{PipeReader: audioReader, PipeWriter: audioWriter},
+		},
+		controls: make(map[string]Control),
 	}
+	o.controls = make(map[string]Control)
 
 	return o
 }
@@ -72,7 +85,10 @@ func (o *Orchestrator) StartMediaProcessors() {
 				wg.Done()
 			}()
 
-			err := processor.Transcode(o.Stream.PipeReader)
+			err := processor.Transcode(
+				o.stream.Video.PipeReader,
+				o.stream.Audio.PipeReader,
+			)
 
 			if err != nil {
 				log.Println("Error was caught in media processor. Err", err)
@@ -94,7 +110,7 @@ func (o *Orchestrator) Start() error {
 		return errors.New("not found control name.")
 	}
 
-	if err := control.StartStream(o.Stream); err != nil {
+	if err := control.StartStream(o.stream); err != nil {
 		log.Println("Start stream error", err)
 	}
 

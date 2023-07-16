@@ -31,17 +31,10 @@ type OnTrackClosure func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver
 
 func (ctrl *WhipControl) onTrackHandler(stream *orchestrator.Stream) OnTrackClosure {
 	return func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
-
-		id := track.RID()
-
-		if id == "" {
-			id = "whip-track-id"
-		}
-
 		if strings.HasPrefix(track.Codec().RTPCodecCapability.MimeType, "audio") {
-			// audioWriter(track, stream)
+			audioWriter(track, ctrl.peerConnection, stream.Audio.PipeWriter)
 		} else {
-			videoWriter(track, ctrl.peerConnection, stream.PipeWriter)
+			videoWriter(track, ctrl.peerConnection, stream.Video.PipeWriter)
 		}
 	}
 }
