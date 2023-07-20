@@ -4,7 +4,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
@@ -31,10 +30,14 @@ type OnTrackClosure func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver
 
 func (ctrl *WhipControl) onTrackHandler(stream *orchestrator.Stream) OnTrackClosure {
 	return func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
-		if strings.HasPrefix(track.Codec().RTPCodecCapability.MimeType, "audio") {
-			audioWriter(track, ctrl.peerConnection, stream.Audio.PipeWriter)
-		} else {
-			videoWriter(track, ctrl.peerConnection, stream.Video.PipeWriter)
+		switch track.Codec().RTPCodecCapability.MimeType {
+
+		case webrtc.MimeTypeOpus, "audio/OPUS":
+			opusTrackWriter(track, ctrl.peerConnection, stream.Audio.PipeWriter)
+
+		case webrtc.MimeTypeH264:
+			h264TrackWriter(track, ctrl.peerConnection, stream.Video.PipeWriter)
+
 		}
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/api/consumer/whip"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
@@ -85,14 +86,31 @@ var (
 	webrtcAPI *webrtc.API
 )
 
+const (
+	PORT = 8443
+)
+
 func Configure() {
 	mediaEngine := &webrtc.MediaEngine{}
+	mediaSettings := webrtc.SettingEngine{}
+
+	mux, err := ice.NewMultiUDPMuxFromPort(PORT)
+
+	if err != nil {
+		panic(err)
+	}
+
+	log.Printf("Listening for WebRTC traffic at %d\n", PORT)
+
+	mediaSettings.SetICEUDPMux(mux)
+
 	if err := populateMediaEngine(mediaEngine); err != nil {
 		panic(err)
 	}
 
 	webrtcAPI = webrtc.NewAPI(
 		webrtc.WithMediaEngine(mediaEngine),
+		webrtc.WithSettingEngine(mediaSettings),
 	)
 }
 
