@@ -15,3 +15,13 @@ deployment:
   webrtc:
     port: 8443
     protocol: UDP
+
+tests:
+  webrtcClient:
+    image:
+      registry: k3d-stream-platform-registry:5000
+      name: services/ingest/webrtc-client
+      tag: latest
+    whipEndpoint:
+      name: WHIP_ENDPOINT
+

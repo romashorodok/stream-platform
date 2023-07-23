@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: '{{ template "ingest.fullname" . }}-webrtc-client-test'
+  labels:
+    app: {{ template "ingest.name" . }}
+    chart: {{ template "ingest.chart" . }}
+    release: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": test-success
+spec:
+  activeDeadlineSeconds: 10
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: '{{ template "ingest.fullname" . }}-webrtc-client-test'
+          image: "{{ .Values.tests.webrtcClient.image.registry }}/{{ .Values.tests.webrtcClient.image.name }}:{{ .Values.tests.webrtcClient.image.tag}}"
+          env:
+            - name: {{ .Values.tests.webrtcClient.whipEndpoint.name }}
+              valueFrom:
+                secretKeyRef:
+                  name: '{{ template "ingest.fullname" . }}-secet-tests'
+                  key: whipEndpoint
