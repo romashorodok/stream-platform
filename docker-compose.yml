@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+
+  ingest:
+    image: ${REGISTRY}/services/ingest:latest
+    build:
+      context: services/ingest/
+      target: ingest-builder
+
+
+  webrtc-client:
+    image: ${REGISTRY}/services/ingest/webrtc-client:latest
+    build:
+      context: services/ingest/
+      target: webrtc-client

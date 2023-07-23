@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "ingest.fullname" . }}
+  labels:
+    app: {{ template "ingest.name" . }}
+    chart: {{ template "ingest.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+  selector:
+    app: {{ template "ingest.name" . }}
+

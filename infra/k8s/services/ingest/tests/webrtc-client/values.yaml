@@ -1,0 +1,11 @@
+
+
+image:
+  registry: k3d-stream-platform-registry:5000
+  name: services/ingest/webrtc-client
+  tag: latest
+
+whipEndpoint:
+  name: WHIP_ENDPOINT
+  value: http://stream-platform-ingest.default.svc.cluster.local:8089/api/consumer/whip
+

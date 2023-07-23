@@ -14,9 +14,22 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-const (
-	endpoint = "http://127.0.0.1:8089/api/consumer/whip"
-)
+type Config struct {
+	WHIPEndpoint string
+}
+
+func env(key, defaultVariable string) string {
+	if variable := os.Getenv(key); variable != "" {
+		return variable
+	}
+	return defaultVariable
+}
+
+func NewConfig() *Config {
+	return &Config{
+		WHIPEndpoint: env("WHIP_ENDPOINT", "http://127.0.0.1:8089/api/consumer/whip"),
+	}
+}
 
 func NewWebrtcAPI() *webrtc.API {
 	mediaEngine := &webrtc.MediaEngine{}
@@ -30,12 +43,13 @@ func NewWebrtcAPI() *webrtc.API {
 	)
 }
 
-func WHIPRequest(sdpOffer string) (sdpAnswer string) {
+func WHIPRequest(sdpOffer, WHIPEndpoint string) (sdpAnswer string) {
+
 	reader := strings.NewReader(sdpOffer)
 
 	client := http.Client{}
 
-	request, err := http.NewRequest("POST", endpoint, reader)
+	request, err := http.NewRequest("POST", WHIPEndpoint, reader)
 
 	if err != nil {
 		log.Panicf("Unable create request. Err: %s", err)
@@ -90,6 +104,7 @@ func WriteUDPToTrack(conn *net.UDPConn, track *webrtc.TrackLocalStaticRTP) {
 }
 
 func main() {
+	config := NewConfig()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
@@ -137,15 +152,20 @@ func main() {
 	peerConnection.OnICECandidate(func(candidate *webrtc.ICECandidate) {
 		if candidate != nil {
 			log.Printf("PeerConnection ice candidate", candidate.String)
+			log.Printf("PeerConnection ice candidate", candidate.Port)
+			log.Printf("PeerConnection ice candidate", candidate.Protocol)
+			log.Printf("PeerConnection ice candidate", candidate.Address)
 		}
 	})
 
 	sdpOffer, _ := peerConnection.CreateOffer(nil)
-	sdpAnswer := WHIPRequest(sdpOffer.SDP)
+	sdpAnswer := WHIPRequest(sdpOffer.SDP, config.WHIPEndpoint)
 
 	answer := webrtc.SessionDescription{}
 	answer.Type = webrtc.SDPTypeAnswer
 	answer.SDP = sdpAnswer
+
+	log.Println(sdpAnswer)
 
 	if err = peerConnection.SetLocalDescription(sdpOffer); err != nil {
 		log.Fatal("PeerConnection could not set local offer. ", err)

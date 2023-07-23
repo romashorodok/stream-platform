@@ -1,0 +1,17 @@
+
+image:
+  registry: k3d-stream-platform-registry:5000
+  name: services/ingest
+  tag: latest
+
+service:
+  type: ClusterIP
+  port: 8089
+
+deployment:
+  http:
+    port: 8089
+    protocol: TCP
+  webrtc:
+    port: 8443
+    protocol: UDP
