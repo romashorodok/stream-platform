@@ -2,8 +2,8 @@
 cluster:
 	k3d cluster create stream-platform-cluster \
 		--agents 1 \
-		-p 8080:80@agent:0 \
-		-p 31820:31820@agent:0 \
+		-p 8089:8089/TCP@agent:0 \
+		-p 3478:3478/UDP@agent:0 \
 		--registry-create k3d-stream-platform-registry:50000
 
 delete:

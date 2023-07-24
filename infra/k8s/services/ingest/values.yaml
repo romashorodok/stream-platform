@@ -5,15 +5,28 @@ image:
   tag: latest
 
 service:
-  type: ClusterIP
-  port: 8089
+  type: LoadBalancer
+#   port: 8089
+
+  # 'http://{{ template "ingest.fullname" . }}.default.svc.cluster.local:8089/api/consumer/whip'
+
+turn:
+  url:
+    name: "TURN_URL"
+    value: "turn:stunner.stunner.svc.cluster.local:3478"
+  user:
+    name: "TURN_USER"
+    value: "user-1"
+  password:
+    name: "TURN_PASSWORD"
+    value: "pass-1"
 
 deployment:
   http:
     port: 8089
     protocol: TCP
   webrtc:
-    port: 8443
+    port: 34788
     protocol: UDP
 
 tests:

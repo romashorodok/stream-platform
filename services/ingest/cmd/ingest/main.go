@@ -7,6 +7,7 @@ import (
 	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/api/consumer/whip"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/config"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
 )
 
@@ -87,7 +88,7 @@ var (
 )
 
 const (
-	PORT = 8443
+	PORT = 34788
 )
 
 func Configure() {
@@ -121,7 +122,11 @@ func main() {
 
 	orchestrator := orchestrator.NewOrchestrator()
 
-	var whip = whip.NewHandler(orchestrator, webrtcAPI)
+	var whip = whip.NewHandler(
+		config.NewConfig(),
+		orchestrator,
+		webrtcAPI,
+	)
 
 	mux.HandleFunc("/api/consumer/whip", whip.Handler)
 

@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/pion/webrtc/v3"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/config"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/mediaprocessor"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
 )
@@ -30,16 +31,22 @@ type whipHandler interface {
 type handler struct {
 	whipHandler
 
+	config       *config.Config
 	orchestrator *orchestrator.Orchestrator
 	webrtcAPI    *webrtc.API
 	control      *WhipControl
 	streamMutex  sync.Mutex
 }
 
-func NewHandler(o *orchestrator.Orchestrator, webrtcAPI *webrtc.API) *handler {
+func NewHandler(
+	config *config.Config,
+	o *orchestrator.Orchestrator,
+	webrtcAPI *webrtc.API,
+) *handler {
 	o.Name = "whip"
 
 	return &handler{
+		config: config,
 		orchestrator: o,
 		webrtcAPI:    webrtcAPI,
 		control: &WhipControl{
@@ -59,7 +66,15 @@ func (h *handler) Handler(res http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	peerConnection, err := h.webrtcAPI.NewPeerConnection(webrtc.Configuration{})
+	peerConnection, err := h.webrtcAPI.NewPeerConnection(webrtc.Configuration{
+		ICEServers: []webrtc.ICEServer{
+			{
+				URLs:       []string{h.config.Turn.URL},
+				Username:   h.config.Turn.User,
+				Credential: h.config.Turn.Password,
+			},
+		},
+	})
 
 	if err != nil {
 		log.Println("Cannot create peer connection. Err:", err)

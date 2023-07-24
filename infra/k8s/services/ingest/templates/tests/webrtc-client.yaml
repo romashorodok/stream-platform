@@ -9,7 +9,7 @@ metadata:
   annotations:
     "helm.sh/hook": test-success
 spec:
-  activeDeadlineSeconds: 10
+  activeDeadlineSeconds: 30
   template:
     spec:
       restartPolicy: Never
