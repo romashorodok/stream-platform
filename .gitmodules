@@ -1,0 +1,3 @@
+[submodule "vendor/violet"]
+	path = vendor/violet
+	url = https://github.com/paullouisageneau/violet
