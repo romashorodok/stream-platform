@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "violet.fullname" . }}
+  labels:
+    app: {{ template "violet.name" . }}
+    chart: {{ template "violet.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "violet.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "violet.name" . }}
+    spec:
+      containers:
+        - name: {{ template "violet.name" . }}
+          image: '{{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}'
+          command:
+            - /usr/local/bin/violet
+          args:
+            - --credentials={{ .Values.deployment.turn.user.value }}:{{ .Values.deployment.turn.password.value }}
+            - -p {{ .Values.deployment.turn.port.value }}
+          ports:
+            - containerPort: {{ .Values.deployment.turn.port.value }}
+              protocol: UDP
+              name: turn-udp
+

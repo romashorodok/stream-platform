@@ -122,7 +122,7 @@ func main() {
 	peerConnection, err := webrtcAPI.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
-				URLs:       []string{"turn:localhost:3478"},
+				URLs:       []string{"turn:127.0.0.1:3478"},
 				Username:   "user-1",
 				Credential: "pass-1",
 			},

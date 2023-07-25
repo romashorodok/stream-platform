@@ -66,6 +66,10 @@ func (h *handler) Handler(res http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
+	log.Println(h.config.Turn.URL)
+	log.Println(h.config.Turn.User)
+	log.Println(h.config.Turn.Password)
+
 	peerConnection, err := h.webrtcAPI.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{

@@ -14,3 +14,9 @@ services:
     build:
       context: services/ingest/
       target: webrtc-client
+
+  violet:
+    image: ${REGISTRY}/turn/violet:latest
+    build:
+      context: vendor/violet/
+      target: app

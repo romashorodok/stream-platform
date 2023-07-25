@@ -88,7 +88,7 @@ var (
 )
 
 const (
-	PORT = 34788
+	PORT = 3478
 )
 
 func Configure() {

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "violet.fullname" . }}
+  labels:
+    app: {{ template "violet.name" . }}
+    chart: {{ template "violet.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      protocol: UDP
+      name: turn-udp
+

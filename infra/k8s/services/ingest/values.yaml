@@ -13,7 +13,7 @@ service:
 turn:
   url:
     name: "TURN_URL"
-    value: "turn:stunner.stunner.svc.cluster.local:3478"
+    value: "turn:stream-platform-violet.default.svc.cluster.local:3478"
   user:
     name: "TURN_USER"
     value: "user-1"
@@ -26,7 +26,7 @@ deployment:
     port: 8089
     protocol: TCP
   webrtc:
-    port: 34788
+    port: 3478
     protocol: UDP
 
 tests:

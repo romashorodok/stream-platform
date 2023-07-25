@@ -1,0 +1,21 @@
+image:
+  registry: k3d-stream-platform-registry:5000
+  name: turn/violet
+  tag: latest
+
+service:
+  type: LoadBalancer
+  port: 3478
+
+deployment:
+  turn:
+    port:
+      name: "PORT"
+      value: 3478
+    user:
+      name: "USER"
+      value: "user-1"
+    password:
+      name: "PASSWORD"
+      value: "pass-1"
+
