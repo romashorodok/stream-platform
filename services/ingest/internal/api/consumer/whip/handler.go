@@ -45,7 +45,7 @@ func NewHandler(o *orchestrator.Orchestrator, webrtcAPI *webrtc.API) *handler {
 		control: &WhipControl{
 			webrtcAPI: webrtcAPI,
 			mediaProcessors: []orchestrator.MediaProcessor{
-				mediaprocessor.HSLMediaProcessor{},
+				&mediaprocessor.HLSMediaProcessor{},
 			},
 		},
 	}
@@ -60,6 +60,12 @@ func (h *handler) Handler(res http.ResponseWriter, r *http.Request) {
 	}
 
 	peerConnection, err := h.webrtcAPI.NewPeerConnection(webrtc.Configuration{})
+
+	peerConnection.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
+		if state == webrtc.ICEConnectionStateDisconnected {
+			h.orchestrator.Stop()
+		}
+	})
 
 	if err != nil {
 		log.Println("Cannot create peer connection. Err:", err)

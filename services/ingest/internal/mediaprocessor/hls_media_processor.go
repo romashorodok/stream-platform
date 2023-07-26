@@ -1,21 +1,27 @@
 package mediaprocessor
 
 import (
-	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 
-	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
+	"github.com/google/uuid"
 	"github.com/romashorodok/stream-platform/services/ingest/pkg/namedpipe"
 )
 
-type HSLMediaProcessor struct {
-	orchestrator.MediaProcessor
+type HLSMediaProcessor struct {
+	OutputDirectory string
 }
 
-func (HSLMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, audioSourcePipe *io.PipeReader) (err error) {
+func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, audioSourcePipe *io.PipeReader) (err error) {
+
+	dir, err := os.MkdirTemp("", fmt.Sprintf("%s-*", uuid.New()))
+	if err != nil {
+		log.Println("Cannot create temp dir")
+	}
+	processor.OutputDirectory = dir
 
 	ffmpeg := exec.Command("ffmpeg",
 		"-fflags", "nobuffer+genpts",
@@ -50,7 +56,7 @@ func (HSLMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, audioSourcePi
 	audioPipe, err := namedpipe.NewNamedPipe()
 	audioPipeFile, err := audioPipe.OpenAsWriteOnly()
 
-	videoStderr, err := ffmpeg.StderrPipe()
+	// videoStderr, err := ffmpeg.StderrPipe()
 
 	if err != nil {
 		log.Println("Failed to open pipes. Err", err)
@@ -64,12 +70,12 @@ func (HSLMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, audioSourcePi
 		io.Copy(audioPipeFile, audioSourcePipe)
 	}()
 
-	go func() {
-		scanner := bufio.NewScanner(videoStderr)
-		for scanner.Scan() {
-			log.Println("[HLS]", scanner.Text())
-		}
-	}()
+	// go func() {
+	// 	scanner := bufio.NewScanner(videoStderr)
+	// 	for scanner.Scan() {
+	// 		log.Println("[HLS]", scanner.Text())
+	// 	}
+	// }()
 
 	if err := ffmpeg.Run(); err != nil {
 		log.Println("Error when running ffmpeg. Err:", err)
@@ -77,4 +83,8 @@ func (HSLMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, audioSourcePi
 	}
 
 	return nil
+}
+
+func (processor *HLSMediaProcessor) Destroy() {
+	os.RemoveAll(processor.OutputDirectory)
 }

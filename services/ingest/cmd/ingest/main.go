@@ -1,9 +1,15 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/api/consumer/whip"
@@ -115,20 +121,38 @@ func Configure() {
 }
 
 func main() {
-	mux := http.NewServeMux()
+	router := mux.NewRouter().StrictSlash(true)
 
 	Configure()
 
-	orchestrator := orchestrator.NewOrchestrator()
+	orchestrator := orchestrator.NewOrchestrator(router)
 
 	var whip = whip.NewHandler(orchestrator, webrtcAPI)
-
-	mux.HandleFunc("/api/consumer/whip", whip.Handler)
+	router.HandleFunc("/api/consumer/whip", whip.Handler)
 
 	server := &http.Server{
-		Handler: mux,
+		Handler: router,
 		Addr:    ":8089",
 	}
 
-	log.Fatal(server.ListenAndServe())
+	go func() {
+		log.Println("Server is listening on :8089")
+		err := server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Error starting server: %v", err)
+		}
+	}()
+
+	terminationSignal := make(chan os.Signal, 1)
+	signal.Notify(terminationSignal, syscall.SIGINT, syscall.SIGTERM)
+
+	<-terminationSignal
+
+	gracefulShutdownTimeout := 10
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(gracefulShutdownTimeout))
+	defer cancel()
+
+	log.Println("Server shut down.")
+
+	server.Shutdown(ctx)
 }

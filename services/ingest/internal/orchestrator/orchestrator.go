@@ -4,11 +4,20 @@ import (
 	"errors"
 	"io"
 	"log"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+
+	"github.com/gorilla/mux"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/api/live/hls"
+	hlsrouter "github.com/romashorodok/stream-platform/services/ingest/internal/api/live/hls/router"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/mediaprocessor"
 )
 
 type MediaProcessor interface {
 	Transcode(videoSourcePipe *io.PipeReader, audioSourcePipe *io.PipeReader) error
+	Destroy()
 }
 
 type Control interface {
@@ -35,12 +44,15 @@ type Orchestrator struct {
 	Name      string
 	IsRunning bool
 
+	router    *mux.Router
+	hlsRouter *hlsrouter.HLSRouter
+
 	stream            *Stream
 	controls          map[string]Control
 	orchestratorMutex sync.Mutex
 }
 
-func NewOrchestrator() *Orchestrator {
+func NewOrchestrator(router *mux.Router) *Orchestrator {
 	videoReader, videoWriter := io.Pipe()
 	audioReader, audioWriter := io.Pipe()
 
@@ -52,6 +64,8 @@ func NewOrchestrator() *Orchestrator {
 		controls: make(map[string]Control),
 	}
 	o.controls = make(map[string]Control)
+
+	o.hlsRouter = hlsrouter.NewHLSRouter(router)
 
 	return o
 }
@@ -74,29 +88,49 @@ func (o *Orchestrator) RegisterControl(impl Control) error {
 }
 
 func (o *Orchestrator) StartMediaProcessors() {
-	var wg sync.WaitGroup
+	shutdown := make(chan os.Signal, 1)
+	done := make(chan struct{})
+
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	control := o.controls[o.Name]
 
-	for _, processor := range control.GetMediaProcessors() {
-		wg.Add(1)
-		go func(processor MediaProcessor) {
-			defer func() {
-				wg.Done()
-			}()
+	go func() {
+		var wg sync.WaitGroup
+		for _, processor := range control.GetMediaProcessors() {
+			wg.Add(1)
 
-			err := processor.Transcode(
-				o.stream.Video.PipeReader,
-				o.stream.Audio.PipeReader,
-			)
+			go func(processor MediaProcessor) {
+				defer func() {
+					wg.Done()
+				}()
 
-			if err != nil {
-				log.Println("Error was caught in media processor. Err", err)
-			}
-		}(processor)
+				switch concreteProcessor := processor.(type) {
+				case *mediaprocessor.HLSMediaProcessor:
+					o.hlsRouter.RegisterRoutes(
+						hls.NewHSLHandler(concreteProcessor),
+					)
+				}
+
+				err := processor.Transcode(o.stream.Video.PipeReader, o.stream.Audio.PipeReader)
+				if err != nil {
+					log.Println("Error was caught in media processor. Err", err)
+				}
+
+			}(processor)
+		}
+
+		wg.Wait()
+		done <- struct{}{}
+		log.Println("Done")
+	}()
+
+	select {
+	case <-shutdown:
+		o.Stop()
+	case <-done:
+		o.Stop()
 	}
-
-	wg.Wait()
 }
 
 func (o *Orchestrator) Start() error {
@@ -117,6 +151,20 @@ func (o *Orchestrator) Start() error {
 	go o.StartMediaProcessors()
 
 	o.IsRunning = true
+
+	return nil
+}
+
+func (o *Orchestrator) Stop() error {
+	control := o.controls[o.Name]
+
+	log.Println("Destroying media processors")
+
+	for _, processor := range control.GetMediaProcessors() {
+		processor.Destroy()
+	}
+
+	o.hlsRouter.RemoveRoutes()
 
 	return nil
 }
