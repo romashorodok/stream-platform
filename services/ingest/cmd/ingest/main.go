@@ -1,17 +1,13 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
+	"github.com/romashorodok/stream-platform/pkg/shutdown"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/api/consumer/whip"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
 )
@@ -121,11 +117,13 @@ func Configure() {
 }
 
 func main() {
+	shutdown := shutdown.NewShutdown()
+
 	router := mux.NewRouter().StrictSlash(true)
 
 	Configure()
 
-	orchestrator := orchestrator.NewOrchestrator(router)
+	orchestrator := orchestrator.NewOrchestrator(router, shutdown)
 
 	var whip = whip.NewHandler(orchestrator, webrtcAPI)
 	router.HandleFunc("/api/consumer/whip", whip.Handler)
@@ -143,16 +141,6 @@ func main() {
 		}
 	}()
 
-	terminationSignal := make(chan os.Signal, 1)
-	signal.Notify(terminationSignal, syscall.SIGINT, syscall.SIGTERM)
-
-	<-terminationSignal
-
-	gracefulShutdownTimeout := 10
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(gracefulShutdownTimeout))
-	defer cancel()
-
-	log.Println("Server shut down.")
-
-	server.Shutdown(ctx)
+	shutdown.Gracefully()
+	log.Println("Gracefull shutdown complete...")
 }

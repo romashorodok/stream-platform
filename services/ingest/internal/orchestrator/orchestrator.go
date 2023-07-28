@@ -4,12 +4,10 @@ import (
 	"errors"
 	"io"
 	"log"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 
 	"github.com/gorilla/mux"
+	"github.com/romashorodok/stream-platform/pkg/shutdown"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/api/live/hls"
 	hlsrouter "github.com/romashorodok/stream-platform/services/ingest/internal/api/live/hls/router"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/mediaprocessor"
@@ -44,6 +42,7 @@ type Orchestrator struct {
 	Name      string
 	IsRunning bool
 
+	shutdown  *shutdown.Shutdown
 	router    *mux.Router
 	hlsRouter *hlsrouter.HLSRouter
 
@@ -52,7 +51,7 @@ type Orchestrator struct {
 	orchestratorMutex sync.Mutex
 }
 
-func NewOrchestrator(router *mux.Router) *Orchestrator {
+func NewOrchestrator(router *mux.Router, shutdown *shutdown.Shutdown) *Orchestrator {
 	videoReader, videoWriter := io.Pipe()
 	audioReader, audioWriter := io.Pipe()
 
@@ -64,6 +63,7 @@ func NewOrchestrator(router *mux.Router) *Orchestrator {
 		controls: make(map[string]Control),
 	}
 	o.controls = make(map[string]Control)
+	o.shutdown = shutdown
 
 	o.hlsRouter = hlsrouter.NewHLSRouter(router)
 
@@ -88,49 +88,35 @@ func (o *Orchestrator) RegisterControl(impl Control) error {
 }
 
 func (o *Orchestrator) StartMediaProcessors() {
-	shutdown := make(chan os.Signal, 1)
-	done := make(chan struct{})
-
-	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	control := o.controls[o.Name]
 
-	go func() {
-		var wg sync.WaitGroup
-		for _, processor := range control.GetMediaProcessors() {
-			wg.Add(1)
+	var wg sync.WaitGroup
+	for _, processor := range control.GetMediaProcessors() {
+		wg.Add(1)
 
-			go func(processor MediaProcessor) {
-				defer func() {
-					wg.Done()
-				}()
+		go func(processor MediaProcessor) {
+			defer func() {
+				wg.Done()
+			}()
 
-				switch concreteProcessor := processor.(type) {
-				case *mediaprocessor.HLSMediaProcessor:
-					o.hlsRouter.RegisterRoutes(
-						hls.NewHSLHandler(concreteProcessor),
-					)
-				}
+			switch concreteProcessor := processor.(type) {
+			case *mediaprocessor.HLSMediaProcessor:
+				o.shutdown.AddTask(o.hlsRouter.RemoveRoutes)
+				o.hlsRouter.RegisterRoutes(
+					hls.NewHSLHandler(concreteProcessor),
+				)
+			}
 
-				err := processor.Transcode(o.stream.Video.PipeReader, o.stream.Audio.PipeReader)
-				if err != nil {
-					log.Println("Error was caught in media processor. Err", err)
-				}
+			err := processor.Transcode(o.stream.Video.PipeReader, o.stream.Audio.PipeReader)
+			if err != nil {
+				log.Println("Error was caught in media processor. Err", err)
+			}
 
-			}(processor)
-		}
-
-		wg.Wait()
-		done <- struct{}{}
-		log.Println("Done")
-	}()
-
-	select {
-	case <-shutdown:
-		o.Stop()
-	case <-done:
-		o.Stop()
+		}(processor)
 	}
+
+	wg.Wait()
 }
 
 func (o *Orchestrator) Start() error {
@@ -144,6 +130,10 @@ func (o *Orchestrator) Start() error {
 		return errors.New("not found control name.")
 	}
 
+	for _, processor := range control.GetMediaProcessors() {
+		o.shutdown.AddTask(processor.Destroy)
+	}
+
 	if err := control.StartStream(o.stream); err != nil {
 		log.Println("Start stream error", err)
 	}
@@ -155,16 +145,7 @@ func (o *Orchestrator) Start() error {
 	return nil
 }
 
-func (o *Orchestrator) Stop() error {
-	control := o.controls[o.Name]
-
-	log.Println("Destroying media processors")
-
-	for _, processor := range control.GetMediaProcessors() {
-		processor.Destroy()
-	}
-
-	o.hlsRouter.RemoveRoutes()
-
-	return nil
+func (o *Orchestrator) Stop() {
+	// NOTE: Should it fail fast ? The main get the signal and stop the server
+	o.shutdown.Trigger()
 }

@@ -1,6 +1,7 @@
 package mediaprocessor
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -19,9 +20,11 @@ func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, au
 
 	dir, err := os.MkdirTemp("", fmt.Sprintf("%s-*", uuid.New()))
 	if err != nil {
-		log.Println("Cannot create temp dir")
+		log.Println("[HLS Proceessor] Cannot create temp dir")
 	}
 	processor.OutputDirectory = dir
+
+	log.Println("[HLS Proceessor] Setup output directory to", processor.OutputDirectory)
 
 	ffmpeg := exec.Command("ffmpeg",
 		"-fflags", "nobuffer+genpts",
@@ -42,13 +45,15 @@ func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, au
 		"-map_metadata", "0",
 		"-copyts",
 		"-copytb", "0",
+		"-strftime", "1",
 		"-f", "hls",
 		"-hls_time", "4",
 		"-hls_list_size", "8",
 		"-hls_flags", "delete_segments+independent_segments",
 		"-hls_start_number_source", "datetime",
-		"-hls_segment_filename", "output_%03d.ts",
-		"output.m3u8",
+		"-hls_segment_filename",
+		fmt.Sprintf("%s/%s", processor.OutputDirectory, "%Y-%m-%d-%s.ts"),
+		fmt.Sprintf("%s/%s", processor.OutputDirectory, "output.m3u8"),
 	)
 
 	ffmpeg.Stdin = videoSourcePipe
@@ -56,7 +61,7 @@ func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, au
 	audioPipe, err := namedpipe.NewNamedPipe()
 	audioPipeFile, err := audioPipe.OpenAsWriteOnly()
 
-	// videoStderr, err := ffmpeg.StderrPipe()
+	videoStderr, err := ffmpeg.StderrPipe()
 
 	if err != nil {
 		log.Println("Failed to open pipes. Err", err)
@@ -70,12 +75,12 @@ func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, au
 		io.Copy(audioPipeFile, audioSourcePipe)
 	}()
 
-	// go func() {
-	// 	scanner := bufio.NewScanner(videoStderr)
-	// 	for scanner.Scan() {
-	// 		log.Println("[HLS]", scanner.Text())
-	// 	}
-	// }()
+	go func() {
+		scanner := bufio.NewScanner(videoStderr)
+		for scanner.Scan() {
+			log.Println("[HLS]", scanner.Text())
+		}
+	}()
 
 	if err := ffmpeg.Run(); err != nil {
 		log.Println("Error when running ffmpeg. Err:", err)
@@ -86,5 +91,6 @@ func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, au
 }
 
 func (processor *HLSMediaProcessor) Destroy() {
+	log.Println("[HLS Proceessor] Removing", processor.OutputDirectory)
 	os.RemoveAll(processor.OutputDirectory)
 }
