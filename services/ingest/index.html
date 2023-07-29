@@ -20,7 +20,7 @@
 
 	<script>
 	 const video = document.getElementById('video');
-	 const manifestUri = 'https://localhost/output.m3u8';
+     const manifestUri = "http://localhost:8089/api/live/hls"
 	 var element;
 
 	 var log = function(text) {
@@ -67,7 +67,7 @@
 			     break;
                      }
 		 });
-             } 
+             }
              else if (element.canPlayType('application/vnd.apple.mpegurl') !== '') {
 		 element.src = manifestUri;
 		 element.addEventListener('loadedmetadata', function() {

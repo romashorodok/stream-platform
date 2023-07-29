@@ -13,7 +13,9 @@ import (
 )
 
 type HLSMediaProcessor struct {
-	OutputDirectory string
+	SourceDirectory  string
+	ManifestFile     string
+	SegmentPrefixURL string
 }
 
 func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, audioSourcePipe *io.PipeReader) (err error) {
@@ -22,9 +24,14 @@ func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, au
 	if err != nil {
 		log.Println("[HLS Proceessor] Cannot create temp dir")
 	}
-	processor.OutputDirectory = dir
+	processor.SourceDirectory = dir
+	processor.ManifestFile = fmt.Sprintf("%s/%s.m3u8",
+		processor.SourceDirectory,
+		uuid.NewString(),
+	)
+	processor.SegmentPrefixURL = "http://localhost:8089/api/live/hls/"
 
-	log.Println("[HLS Proceessor] Setup output directory to", processor.OutputDirectory)
+	log.Println("[HLS Proceessor] Setup output directory to", processor.SourceDirectory)
 
 	ffmpeg := exec.Command("ffmpeg",
 		"-fflags", "nobuffer+genpts",
@@ -51,9 +58,10 @@ func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, au
 		"-hls_list_size", "8",
 		"-hls_flags", "delete_segments+independent_segments",
 		"-hls_start_number_source", "datetime",
-		"-hls_segment_filename",
-		fmt.Sprintf("%s/%s", processor.OutputDirectory, "%Y-%m-%d-%s.ts"),
-		fmt.Sprintf("%s/%s", processor.OutputDirectory, "output.m3u8"),
+		"-hls_allow_cache", "1",
+		"-hls_base_url", processor.SegmentPrefixURL,
+		"-hls_segment_filename", fmt.Sprintf("%s/%s", processor.SourceDirectory, "%Y-%m-%d-%s.ts"),
+		processor.ManifestFile,
 	)
 
 	ffmpeg.Stdin = videoSourcePipe
@@ -91,6 +99,6 @@ func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, au
 }
 
 func (processor *HLSMediaProcessor) Destroy() {
-	log.Println("[HLS Proceessor] Removing", processor.OutputDirectory)
-	os.RemoveAll(processor.OutputDirectory)
+	log.Println("[HLS Proceessor] Removing", processor.SourceDirectory)
+	os.RemoveAll(processor.SourceDirectory)
 }
