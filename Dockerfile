@@ -4,14 +4,19 @@ FROM golang:1.20.6-alpine3.18 as ingest-builder
 WORKDIR /app
 
 COPY go.mod ./
-COPY go.sum ./
+COPY pkg ./pkg/
+
 RUN go mod download
 
-COPY internal/ internal/
-COPY pkg/ pkg/
-COPY cmd/ingest/main.go cmd/ingest/
+WORKDIR /app/services/ingest
 
-RUN apk add --no-cache ffmpeg
+COPY services/ingest/go.mod ./
+COPY services/ingest/go.sum ./
+COPY services/ingest/pkg/ ./pkg/
+COPY services/ingest/internal/ ./internal/
+COPY services/ingest/cmd/ ./cmd/
+
+RUN go mod download
 
 RUN apkArch="$(apk --print-arch)"; \
       case "$apkArch" in \
@@ -20,13 +25,16 @@ RUN apkArch="$(apk --print-arch)"; \
       esac; \
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o ingest ./cmd/ingest/main.go
 
-CMD ["/app/ingest"]
+
+RUN apk add --no-cache ffmpeg
+
+CMD ["/app/services/ingest/ingest"]
 
 FROM scratch as ingest
 
 WORKDIR /app
 
-COPY --from=ingest-builder /app/ingest /usr/bin/
+COPY --from=ingest-builder /app/services/ingest/ingest /usr/bin/
 
 EXPOSE 8089/tcp
 EXPOSE 8443/udp
@@ -39,14 +47,19 @@ FROM golang:1.20.6-alpine3.18 as webrtc-client
 WORKDIR /app
 
 COPY go.mod ./
-COPY go.sum ./
+COPY pkg ./pkg/
 
 RUN go mod download
 
-RUN apk add --no-cache ffmpeg
-RUN apk add font-jetbrains-mono-nerd
+WORKDIR /app/services/ingest
 
-COPY cmd/webrtc-client/ cmd/webrtc-client/
+COPY services/ingest/go.mod ./
+COPY services/ingest/go.sum ./
+COPY services/ingest/pkg/ ./pkg/
+COPY services/ingest/internal/ ./internal/
+COPY services/ingest/cmd/ ./cmd/
+
+RUN go mod download
 
 RUN apkArch="$(apk --print-arch)"; \
       case "$apkArch" in \
@@ -55,5 +68,8 @@ RUN apkArch="$(apk --print-arch)"; \
       esac; \
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o webrtc-client ./cmd/webrtc-client/main.go ./cmd/webrtc-client/start_ffmpeg.go
 
-CMD ["/app/webrtc-client"]
+RUN apk add --no-cache ffmpeg
+RUN apk add font-jetbrains-mono-nerd
+
+CMD ["/app/services/ingest/webrtc-client"]
 

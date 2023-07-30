@@ -5,12 +5,10 @@ services:
   ingest:
     image: ${REGISTRY}/services/ingest:latest
     build:
-      context: services/ingest/
       target: ingest-builder
-
+      # target: ingest
 
   webrtc-client:
     image: ${REGISTRY}/services/ingest/webrtc-client:latest
     build:
-      context: services/ingest/
       target: webrtc-client
