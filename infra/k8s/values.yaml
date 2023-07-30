@@ -1,1 +1,6 @@
 
+stunner:
+  stunner:
+    deployment:
+      hostNetwork: true
+

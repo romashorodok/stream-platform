@@ -2,5 +2,11 @@ dependencies:
 - name: ingest
   repository: file://services/ingest
   version: 0.1.0
-digest: sha256:d854c0f51d149ab7ce1a82eefe285f8fe8b99f87cae5c8e5f67bd880a15a7fb3
-generated: "2023-07-21T21:36:27.124176+03:00"
+- name: stunner
+  repository: https://l7mp.io/stunner
+  version: 0.15.0
+- name: stunner-gateway-operator
+  repository: https://l7mp.io/stunner
+  version: 0.15.0
+digest: sha256:25af8f8da9aec729d5f3fd47881b95bbb033da90a949b70be4896fea409baa10
+generated: "2023-07-31T15:28:59.959044+03:00"

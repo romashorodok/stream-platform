@@ -9,7 +9,12 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ .Values.deployment.http.port }}
+      protocol: {{ .Values.deployment.http.portocol }}
+      name: http
+    - port: {{ .Values.deployment.webrtc.port }}
+      protocol: {{ .Values.deployment.webrtc.portocol }}
+      name: webrtc
   selector:
     app: {{ template "ingest.name" . }}
 

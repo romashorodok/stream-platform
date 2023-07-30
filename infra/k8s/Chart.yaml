@@ -12,5 +12,13 @@ appVersion: "1.16.0"
 
 dependencies:
 - name: ingest
-  version: 0.1.0
+  version: ~0.1.0
   repository: "file://services/ingest"
+- name: stunner
+  version: ~0.15.0
+  repository: "https://l7mp.io/stunner"
+  condition: stunner.enabled
+- name: stunner-gateway-operator
+  version: ~0.15.0
+  repository: "https://l7mp.io/stunner"
+  condition: stunner-gateway-operator.enabled

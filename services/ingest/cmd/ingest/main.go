@@ -9,6 +9,7 @@ import (
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/pkg/shutdown"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/api/consumer/whip"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/config"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
 )
 
@@ -89,7 +90,7 @@ var (
 )
 
 const (
-	PORT = 8443
+	PORT = 34788
 )
 
 func Configure() {
@@ -97,13 +98,13 @@ func Configure() {
 	mediaSettings := webrtc.SettingEngine{}
 
 	mux, err := ice.NewMultiUDPMuxFromPort(PORT)
-
+	
 	if err != nil {
 		panic(err)
 	}
-
+	
 	log.Printf("Listening for WebRTC traffic at %d\n", PORT)
-
+	
 	mediaSettings.SetICEUDPMux(mux)
 
 	if err := populateMediaEngine(mediaEngine); err != nil {
@@ -125,7 +126,12 @@ func main() {
 
 	orchestrator := orchestrator.NewOrchestrator(router, shutdown)
 
-	var whip = whip.NewHandler(orchestrator, webrtcAPI)
+	var whip = whip.NewHandler(
+		config.NewConfig(),
+		orchestrator,
+		webrtcAPI,
+	)
+
 	router.HandleFunc("/api/consumer/whip", whip.Handler)
 
 	server := &http.Server{

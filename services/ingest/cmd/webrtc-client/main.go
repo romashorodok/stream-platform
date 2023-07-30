@@ -119,7 +119,15 @@ func main() {
 
 	webrtcAPI := NewWebrtcAPI()
 
-	peerConnection, err := webrtcAPI.NewPeerConnection(webrtc.Configuration{})
+	peerConnection, err := webrtcAPI.NewPeerConnection(webrtc.Configuration{
+		ICEServers: []webrtc.ICEServer{
+			{
+				URLs:       []string{"turn:localhost:3478"},
+				Username:   "user-1",
+				Credential: "pass-1",
+			},
+		},
+	})
 
 	if err != nil {
 		log.Fatal("Cannot create peer connection. Err:", err)
@@ -159,6 +167,9 @@ func main() {
 	})
 
 	sdpOffer, _ := peerConnection.CreateOffer(nil)
+	log.Println(sdpOffer.SDP)
+	log.Println("end offer")
+
 	sdpAnswer := WHIPRequest(sdpOffer.SDP, config.WHIPEndpoint)
 
 	answer := webrtc.SessionDescription{}
@@ -166,6 +177,7 @@ func main() {
 	answer.SDP = sdpAnswer
 
 	log.Println(sdpAnswer)
+	log.Println("end anser")
 
 	if err = peerConnection.SetLocalDescription(sdpOffer); err != nil {
 		log.Fatal("PeerConnection could not set local offer. ", err)
@@ -175,7 +187,8 @@ func main() {
 		log.Fatal("Peer could not set remote sdp answer. Err:", err)
 	}
 
-	<-webrtc.GatheringCompletePromise(peerConnection)
+	ch := webrtc.GatheringCompletePromise(peerConnection)
+	<-ch
 
 	go startFFmpegAudioRTPSource()
 	go startFFmpegVideoRTPSource()

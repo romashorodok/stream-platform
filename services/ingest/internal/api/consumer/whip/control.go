@@ -30,6 +30,8 @@ type OnTrackClosure func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver
 
 func (ctrl *WhipControl) onTrackHandler(stream *orchestrator.Stream) OnTrackClosure {
 	return func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
+		log.Println("Establishing connection ", track.Codec())
+
 		switch track.Codec().RTPCodecCapability.MimeType {
 
 		case webrtc.MimeTypeOpus, "audio/OPUS":

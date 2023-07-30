@@ -17,12 +17,19 @@ spec:
     spec:
       containers:
         - name: {{ template "ingest.name" . }}
-          image: {{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}
+          image: '{{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}'
+          env:
+            - name: {{ .Values.turn.url.name }}
+              value: {{ .Values.turn.url.value }}
+            - name: {{ .Values.turn.user.name }}
+              value: {{ .Values.turn.user.value }}
+            - name: {{ .Values.turn.password.name }}
+              value: {{ .Values.turn.password.value }}
           ports:
            - containerPort: {{ .Values.deployment.http.port }}
              protocol: {{ .Values.deployment.http.protocol }}
              name: http
            - containerPort: {{ .Values.deployment.webrtc.port }}
              protocol: {{ .Values.deployment.webrtc.protocol }}
-             name: webrtc 
-      
+             name: webrtc
+
