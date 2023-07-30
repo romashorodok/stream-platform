@@ -39,15 +39,14 @@ type Stream struct {
 }
 
 type Orchestrator struct {
-	Name      string
-	IsRunning bool
+	Name string
 
 	shutdown  *shutdown.Shutdown
 	router    *mux.Router
 	hlsRouter *hlsrouter.HLSRouter
 
 	stream            *Stream
-	controls          map[string]Control
+	control           Control
 	orchestratorMutex sync.Mutex
 }
 
@@ -60,11 +59,9 @@ func NewOrchestrator(router *mux.Router, shutdown *shutdown.Shutdown) *Orchestra
 			Video: &VideoStream{PipeReader: videoReader, PipeWriter: videoWriter},
 			Audio: &AudioStream{PipeReader: audioReader, PipeWriter: audioWriter},
 		},
-		controls: make(map[string]Control),
+		control: nil,
 	}
-	o.controls = make(map[string]Control)
 	o.shutdown = shutdown
-
 	o.hlsRouter = hlsrouter.NewHLSRouter(router)
 
 	return o
@@ -74,25 +71,19 @@ func (o *Orchestrator) RegisterControl(impl Control) error {
 	o.orchestratorMutex.Lock()
 	defer o.orchestratorMutex.Unlock()
 
-	if o.controls[o.Name] != nil {
+	if o.control != nil {
 		return errors.New("control already assigned")
 	}
 
-	if len(o.controls) > 1 {
-		return errors.New("system supports only one stream source")
-	}
-
-	o.controls[o.Name] = impl
+	o.control = impl
 
 	return nil
 }
 
 func (o *Orchestrator) StartMediaProcessors() {
-
-	control := o.controls[o.Name]
-
 	var wg sync.WaitGroup
-	for _, processor := range control.GetMediaProcessors() {
+
+	for _, processor := range o.control.GetMediaProcessors() {
 		wg.Add(1)
 
 		go func(processor MediaProcessor) {
@@ -120,27 +111,19 @@ func (o *Orchestrator) StartMediaProcessors() {
 }
 
 func (o *Orchestrator) Start() error {
-	if len(o.controls) > 1 {
-		return errors.New("system supports only one stream source")
-	}
-
-	control := o.controls[o.Name]
-
-	if control == nil {
+	if o.control == nil {
 		return errors.New("not found control name.")
 	}
 
-	for _, processor := range control.GetMediaProcessors() {
+	for _, processor := range o.control.GetMediaProcessors() {
 		o.shutdown.AddTask(processor.Destroy)
 	}
 
-	if err := control.StartStream(o.stream); err != nil {
+	if err := o.control.StartStream(o.stream); err != nil {
 		log.Println("Start stream error", err)
 	}
 
 	go o.StartMediaProcessors()
-
-	o.IsRunning = true
 
 	return nil
 }
