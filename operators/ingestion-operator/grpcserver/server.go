@@ -12,10 +12,11 @@ import (
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver/ingest"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func UnaryInterceptorLogrFromZap() grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	return func(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		zapLogger := ctxzap.Extract(ctx)
 		logrLogger := zapr.NewLogger(zapLogger)
 
@@ -25,7 +26,7 @@ func UnaryInterceptorLogrFromZap() grpc.UnaryServerInterceptor {
 	}
 }
 
-func NewServer(log *zap.Logger) *grpc.Server {
+func NewServer(client client.Client, log *zap.Logger) *grpc.Server {
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(
 			grpc_middleware.ChainUnaryServer(
@@ -35,7 +36,7 @@ func NewServer(log *zap.Logger) *grpc.Server {
 		),
 	)
 
-	ingestionControllerService := &ingest.IngestControllerService{}
+	ingestionControllerService := ingest.NewIngestControllerService(client)
 	ingestioncontrollerpb.RegisterIngestControllerServiceServer(server, ingestionControllerService)
 
 	return server

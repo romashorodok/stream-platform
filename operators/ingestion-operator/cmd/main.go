@@ -36,6 +36,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	//+kubebuilder:scaffold:imports
@@ -73,7 +74,7 @@ const (
 	GRPC_PORT = ":9191"
 )
 
-func NewGRPCRunnable(log *uberzap.Logger) (*GRPCRunnable, error) {
+func NewGRPCRunnable(client client.Client, log *uberzap.Logger) (*GRPCRunnable, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s%s", GRPC_HOST, GRPC_PORT))
 
 	if err != nil {
@@ -85,7 +86,7 @@ func NewGRPCRunnable(log *uberzap.Logger) (*GRPCRunnable, error) {
 
 	return &GRPCRunnable{
 		listener: listener,
-		server:   grpcserver.NewServer(log),
+		server:   grpcserver.NewServer(client, log),
 	}, nil
 }
 
@@ -108,8 +109,6 @@ func main() {
 	logrLogger := zapr.NewLogger(zaprLogger)
 
 	ctrl.SetLogger(logrLogger)
-
-	grpcServer, _ := NewGRPCRunnable(zaprLogger)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -135,8 +134,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	grpcServer, err := NewGRPCRunnable(mgr.GetClient(), zaprLogger)
+
+	if err != nil {
+		setupLog.Error(err, "grpc server bootstrap failed")
+		os.Exit(1)
+	}
+
 	if err = mgr.Add(grpcServer); err != nil {
-		setupLog.Error(err, "grpc server runtime problem")
+		setupLog.Error(err, "unable add grpc server to manager")
 		os.Exit(1)
 	}
 
