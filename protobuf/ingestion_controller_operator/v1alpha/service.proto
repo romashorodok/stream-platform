@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ingestion_controller_operator.v1alpha;
+
+option go_package = "github.com/romashorodok/stream-platform/gen/golang/ingestion_controller_operator/v1alpha;ingestioncontrollerpb";
+
+service IngestControllerService {
+    rpc StartServer(StartServerRequest) returns (StartServerResponse);
+}
+
+message StartServerRequest {
+    string username = 1;
+}
+
+message StartServerResponse {
+
+}
+

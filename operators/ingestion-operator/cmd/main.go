@@ -17,13 +17,21 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
+	"net"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+
+	"github.com/go-logr/zapr"
+	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver"
+	"google.golang.org/grpc"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	uberzap "go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -44,6 +52,43 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+type GRPCRunnable struct {
+	server   *grpc.Server
+	listener net.Listener
+}
+
+func (runnable *GRPCRunnable) Start(ctx context.Context) error {
+	go func() {
+		select {
+		case <-ctx.Done():
+			runnable.server.GracefulStop()
+		}
+	}()
+
+	return runnable.server.Serve(runnable.listener)
+}
+
+const (
+	GRPC_HOST = "localhost"
+	GRPC_PORT = ":9191"
+)
+
+func NewGRPCRunnable(log *uberzap.Logger) (*GRPCRunnable, error) {
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s%s", GRPC_HOST, GRPC_PORT))
+
+	if err != nil {
+		return nil, fmt.Errorf("unable start listener %s", err)
+	}
+
+	logrLogger := zapr.NewLogger(log)
+	logrLogger.Info("Starting serving grpc server", "grpc.addr", GRPC_PORT)
+
+	return &GRPCRunnable{
+		listener: listener,
+		server:   grpcserver.NewServer(log),
+	}, nil
+}
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -59,7 +104,12 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	zaprLogger := zap.NewRaw(zap.UseFlagOptions(&opts))
+	logrLogger := zapr.NewLogger(zaprLogger)
+
+	ctrl.SetLogger(logrLogger)
+
+	grpcServer, _ := NewGRPCRunnable(zaprLogger)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -82,6 +132,11 @@ func main() {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	if err = mgr.Add(grpcServer); err != nil {
+		setupLog.Error(err, "grpc server runtime problem")
 		os.Exit(1)
 	}
 
