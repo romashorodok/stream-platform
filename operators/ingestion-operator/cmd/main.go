@@ -22,14 +22,17 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	"github.com/go-logr/zapr"
-	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver"
 	"google.golang.org/grpc"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
+	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver"
+	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver/container"
 
 	uberzap "go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +42,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	romashorodokcomv1alpha1 "github.com/romashorodok/stream-platform/operators/ingestion-operator/api/v1alpha1"
+	"github.com/romashorodok/stream-platform/operators/ingestion-operator/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -49,7 +55,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
+	utilruntime.Must(romashorodokcomv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -146,6 +152,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controller.IngestTemplateReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "IngestTemplate")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -157,9 +170,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		if err := mgr.Start(ctx); err != nil {
+			setupLog.Error(err, "problem running manager")
+			os.Exit(1)
+		}
+	}()
+
+	select {
+	case <-ctrl.SetupSignalHandler().Done():
+		container.WithShutdown().Gracefully()
+		cancel()
 	}
+
+	wg.Wait()
 }

@@ -2,9 +2,18 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: romashorodok
+domain: romashorodok.com
 layout:
 - go.kubebuilder.io/v4
 projectName: ingestion-operator
 repo: github.com/romashorodok/stream-platform/operators/ingestion-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: romashorodok.com
+  kind: IngestTemplate
+  path: github.com/romashorodok/stream-platform/operators/ingestion-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"
