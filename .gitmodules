@@ -1,0 +1,3 @@
+[submodule "libs/gnostic"]
+	path = libs/gnostic
+	url = https://github.com/google/gnostic.git

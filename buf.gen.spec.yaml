@@ -1,0 +1,9 @@
+version: v1
+managed:
+  enabled: true
+plugins:
+  - plugin: protoc-gen-upstream-openapi
+    out: gen/openapiv3
+    path: ./libs/gnostic/protoc-gen-upstream-openapi
+    opt:
+       - output_mode=source_relative

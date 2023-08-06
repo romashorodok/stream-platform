@@ -30,3 +30,14 @@ start:
 stop:
 	k3d cluster stop stream-platform-cluster
 
+gnostic-protoc:
+	@if [ ! -f "./libs/gnostic/protoc-gen-upstream-openapi" ]; then \
+		echo "Building protoc-gen-upstream-openapi..."; \
+		go build -C ./libs/gnostic -o ./protoc-gen-upstream-openapi ./cmd/protoc-gen-openapi/main.go; \
+	else \
+		echo "protoc-gen-upstream-openapi already exists."; \
+	fi
+
+openapi: gnostic-protoc
+	@echo "Generate openapi v3 spec..."
+	buf generate --template buf.gen.spec.yaml
