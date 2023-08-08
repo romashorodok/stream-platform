@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package streaming.v1alpha;
+
+option go_package = "github.com/romashorodok/stream-platform/gen/golang/streaming/v1alpha;streamingpb";
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+
+import "openapiv3/annotations.proto";
+
+option (openapi.v3.document) = {
+  info: {
+    title: "StreamingService API";
+    version: "";
+    description: "The service handle stream action";
+    contact: {
+      name: "";
+      url: "";
+      email: "";
+    }
+    license: {
+      name: "";
+      url: "";
+    }
+  }
+
+  // https://swagger.io/docs/specification/authentication/#securitySchemes
+  components: {
+    security_schemes: {
+      additional_properties: [
+        {
+          name: "BearerAuth";
+          value: {
+            security_scheme: {
+              type: "http";
+              scheme: "bearer";
+            }
+          }
+        }
+      ]
+    }
+  }
+};
+
+service StreamingService {
+  option (google.api.default_host) = "localhost";
+
+  // Start stream. It's should create new instance of ingest server by template.
+  rpc StreamStart(StreamStartRequest) returns (StreamStartResponse) {
+    option(google.api.http) = {
+      post: "/stream:start",
+      body: "*"
+    };
+
+    option(openapi.v3.operation) = {
+      responses: {
+	response_or_reference: {
+	  // May be like 400
+	  name: "default";
+	  value: {
+	    response: {
+	      description: "Error response";
+	      content: {
+		additional_properties: [{
+		    name: "application/json";
+		    value: {
+		      schema: {
+			reference: { _ref: "#/components/schemas/ErrorResponse"; };
+		      };
+		    };
+		  }];
+	      };
+	    };
+	  };
+	};
+      };
+
+      security: [{
+	  additional_properties: [{
+	      name: "BearerAuth";
+	      value: {
+		value: [];
+	      };
+	    }];
+	}];
+    };
+  };
+}
+
+message ErrorResponse {
+  reserved 1;
+}
+
+message StreamStartRequest {
+  // The ingest server template. The server will take the user bytes and process them.
+  string ingest_template = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (openapi.v3.property) = {max_length: 4;}
+  ];
+
+  string username = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (openapi.v3.property) = {max_length: 3;}
+  ];
+
+  string password = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (openapi.v3.property) = {max_length: 3;}
+  ];
+}
+
+message StreamStartResponse {
+  // The DNS of server to start ingesting user stream.
+  string ingest_server = 1;
+
+  oneof error {
+    ErrorResponse error_response = 99;
+  }
+}

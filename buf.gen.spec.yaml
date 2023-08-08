@@ -7,3 +7,4 @@ plugins:
     path: ./libs/gnostic/protoc-gen-upstream-openapi
     opt:
        - output_mode=source_relative
+       - default_response=false
