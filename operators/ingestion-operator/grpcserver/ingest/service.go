@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"context"
+	"errors"
 
 	ingestioncontrollerpb "github.com/romashorodok/stream-platform/gen/golang/ingestion_controller_operator/v1alpha"
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/api/v1alpha1"
@@ -12,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,6 +44,7 @@ func NewIngestDeploymentFactory(client client.Client, template v1alpha1.IngestTe
 func (d *IngestServerDeployment) NewDeploymentByTemplate() *appsv1.Deployment {
 	deploymentLabels := labels.Set{
 		"app.kubernetes.io/created-by": d.template.Name,
+		"app.kubernetes.io/owned-by":   d.name,
 	}
 	podLabels := labels.Set{
 		"app": d.name,
@@ -74,14 +77,47 @@ func (d *IngestServerDeployment) NewDeploymentByTemplate() *appsv1.Deployment {
 	}
 }
 
-type IngestControllerService struct {
-	ingestioncontrollerpb.UnimplementedIngestControllerServiceServer
-
+type IngestServerResourceManager struct {
 	client client.Client
 }
 
+const OWNED_BY = "app.kubernetes.io/owned-by"
+
+func (m *IngestServerResourceManager) GetByOwnedByDeploymentName(context context.Context, namespace, name string) (*appsv1.Deployment, error) {
+	var ingestServer appsv1.Deployment
+	namespacedName := types.NamespacedName{Namespace: namespace, Name: name}
+
+	if err := m.client.Get(context, namespacedName, &ingestServer); err != nil {
+		return nil, err
+	}
+
+	ownerName, found := ingestServer.Labels[OWNED_BY]
+
+	if !found {
+		return nil, errors.New("resource don't has owner. Cannot get it")
+	}
+
+	if ownerName != name {
+		return nil, errors.New("trying to get non-owner resource access")
+	}
+
+	return &ingestServer, nil
+}
+
+type IngestControllerService struct {
+	ingestioncontrollerpb.UnimplementedIngestControllerServiceServer
+
+	client          client.Client
+	resourceManager IngestServerResourceManager
+}
+
+var _ ingestioncontrollerpb.IngestControllerServiceServer = (*IngestControllerService)(nil)
+
 func NewIngestControllerService(client client.Client) *IngestControllerService {
-	return &IngestControllerService{client: client}
+	return &IngestControllerService{
+		client:          client,
+		resourceManager: IngestServerResourceManager{client: client},
+	}
 }
 
 func (s *IngestControllerService) StartServer(context context.Context, req *ingestioncontrollerpb.StartServerRequest) (*ingestioncontrollerpb.StartServerResponse, error) {
@@ -97,7 +133,7 @@ func (s *IngestControllerService) StartServer(context context.Context, req *inge
 	}
 
 	ingestFactory := NewIngestDeploymentFactory(s.client, *ingestTemplate, &IngestServerDeploymentOpts{
-		Name:      req.Username,
+		Name:      req.Deployment,
 		Namespace: "default",
 		Replicas:  1,
 	})
@@ -110,4 +146,24 @@ func (s *IngestControllerService) StartServer(context context.Context, req *inge
 	}
 
 	return &ingestioncontrollerpb.StartServerResponse{}, nil
+}
+
+func (s *IngestControllerService) StopServer(context context.Context, req *ingestioncontrollerpb.StopServerRequest) (*ingestioncontrollerpb.StopServerResponse, error) {
+	log := container.WithLogr(context)
+
+	resource, err := s.resourceManager.GetByOwnedByDeploymentName(context, req.Namespace, req.Deployment)
+
+	if err != nil {
+		log.Error(err, "Unable get ingest resource")
+		return nil, status.Errorf(codes.NotFound, "not found ingest server for %s/%s", req.Namespace, req.Deployment)
+	}
+
+	err = s.client.Delete(context, resource)
+
+	if err != nil {
+		log.Error(err, "Unable delete ingest server resource")
+		return nil, status.Error(codes.FailedPrecondition, "unable delete ingest deployment")
+	}
+
+	return &ingestioncontrollerpb.StopServerResponse{}, nil
 }

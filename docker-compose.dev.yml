@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+
+  stream-pg:
+    image: postgres:15.4-alpine3.18
+    environment:
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "password"
+    ports:
+      - 5432:5432
+
+  identity-pg:
+    image: postgres:15.4-alpine3.18
+    environment:
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "password"
+    ports:
+      - 5433:5432

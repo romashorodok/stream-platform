@@ -6,14 +6,22 @@ option go_package = "github.com/romashorodok/stream-platform/gen/golang/ingestio
 
 service IngestControllerService {
   rpc StartServer(StartServerRequest) returns (StartServerResponse);
+  rpc StopServer(StopServerRequest) returns (StopServerResponse);
 }
 
 message StartServerRequest {
-  string username = 1;
+  string deployment = 1;
   string ingest_template = 2;
 }
 
 message StartServerResponse {
-
 }
 
+message StopServerRequest {
+  string deployment = 1;
+  string namespace = 2;
+}
+
+message StopServerResponse {
+  
+}

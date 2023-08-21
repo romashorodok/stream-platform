@@ -1,0 +1,329 @@
+syntax = "proto3";
+
+package identity.v1alpha;
+
+option go_package = "github.com/romashorodok/stream-platform/gen/golang/identity/v1alpha;identitypb";
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+
+import "openapiv3/annotations.proto";
+
+option (openapi.v3.document) = {
+  info: {
+    title: "Identity Service API";
+    version: "";
+    description: "The service handle user authentication";
+    contact: {
+      name: "";
+      url: "";
+      email: "";
+    }
+    license: {
+      name: "";
+      url: "";
+    }
+  }
+
+  // https://swagger.io/docs/specification/authentication/#securitySchemes
+  components: {
+    security_schemes: {
+      additional_properties: [
+        {
+          name: "BearerAuth";
+          value: {
+            security_scheme: {
+              type: "http";
+              scheme: "bearer";
+            }
+          }
+        }
+      ]
+    }
+  }
+};
+
+message ErrorResponse {
+  string message = 1 [
+    (google.api.field_behavior) = REQUIRED
+  ];
+}
+
+service IdentityService {
+  option (google.api.default_host) = "localhost";
+
+  rpc SignIn(SignInRequest) returns (SignInResponse) {
+    option(google.api.http) = {
+      post: "/sign-in",
+      body: "*",
+    };
+
+    option(openapi.v3.operation) = {
+      responses: {
+	response_or_reference: {
+	  name: "default";
+	  value: {
+	    response: {
+	      description: "Error response";
+	      content: {
+		additional_properties: [{
+		    name: "application/json";
+		    value: {
+		      schema: {
+			reference: { _ref: "#/components/schemas/ErrorResponse"; };
+		      };
+		    };
+		  }];
+	      };
+	    };
+	  };
+	};
+      };
+    };
+  };
+
+  rpc SignUp(SignUpRequest) returns (SignUpResponse) {
+    option(google.api.http) = {
+      post: "/sign-up",
+      body: "*",
+    };
+
+    option(openapi.v3.operation) = {
+      responses: {
+	response_or_reference: {
+	  name: "default";
+	  value: {
+	    response: {
+	      description: "Error response";
+	      content: {
+		additional_properties: [{
+		    name: "application/json";
+		    value: {
+		      schema: {
+			reference: { _ref: "#/components/schemas/ErrorResponse"; };
+		      };
+		    };
+		  }];
+	      };
+	    };
+	  };
+	};
+      };
+    };
+  };
+
+  rpc SignOut(SignOutRequest) returns (SignOutResponse) {
+    option(google.api.http) = {
+      post: "/sign-out",
+    };
+
+    option(openapi.v3.operation) = {
+      responses: {
+	response_or_reference: {
+	  name: "default";
+	  value: {
+	    response: {
+	      description: "Error response";
+	      content: {
+		additional_properties: [{
+		    name: "application/json";
+		    value: {
+		      schema: {
+			reference: { _ref: "#/components/schemas/ErrorResponse"; };
+		      };
+		    };
+		  }];
+	      };
+	    };
+	  };
+	};
+      };
+
+      security: [{
+	  additional_properties: [{
+	      name: "BearerAuth";
+	      value: {
+		value: [];
+	      };
+	    }];
+	}];
+    };
+  };
+}
+
+message SignInRequest {
+  string username = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (openapi.v3.property) = {max_length: 30;}
+  ];
+
+  string password = 2 [
+      (google.api.field_behavior) = REQUIRED,
+      (openapi.v3.property) = {max_length: 30;}
+  ];
+}
+
+message SignInResponse {
+  oneof error {
+    ErrorResponse error_response = 99;
+  }
+}
+
+
+message SignUpRequest {
+  string username = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (openapi.v3.property) = {max_length: 30;}
+  ];
+
+  string password = 2 [
+      (google.api.field_behavior) = REQUIRED,
+      (openapi.v3.property) = {max_length: 30;}
+  ];
+}
+
+message SignUpResponse {}
+
+
+// NOTE: Pass the token in metadata/header
+message SignOutRequest {}
+
+message SignOutResponse {}
+
+service TokenService {
+  option (google.api.default_host) = "localhost";
+
+  rpc ExchangeToken(ExchangeTokenRequest) returns (ExchangeTokenResponse) {
+    option(google.api.http) = {
+      put: "/access-token",
+    };
+
+    option(openapi.v3.operation) = {
+      responses: {
+	response_or_reference: {
+	  name: "default";
+	  value: {
+	    response: {
+	      description: "Error response";
+	      content: {
+		additional_properties: [{
+		    name: "application/json";
+		    value: {
+		      schema: {
+			reference: { _ref: "#/components/schemas/ErrorResponse"; };
+		      };
+		    };
+		  }];
+	      };
+	    };
+	  };
+	};
+      };
+
+      security: [{
+	  additional_properties: [{
+	      name: "BearerAuth";
+	      value: {
+		value: [];
+	      };
+	    }];
+	}];
+    };
+  };
+}
+
+// NOTE: Refresh token must be in cookie/metadata
+message ExchangeTokenRequest {}
+
+message ExchangeTokenResponse {
+  string access_token = 1;
+}
+
+service PublicKeyService {
+  rpc PublicKeyList(PublicKeyListRequest) returns (PublicKeyListResponse) {
+    option(google.api.http) = {
+      get: "/keys",
+    };
+
+    option(openapi.v3.operation) = {
+      responses: {
+	response_or_reference: {
+	  name: "default";
+	  value: {
+	    response: {
+	      description: "Error response";
+	      content: {
+		additional_properties: [{
+		    name: "application/json";
+		    value: {
+		      schema: {
+			reference: { _ref: "#/components/schemas/ErrorResponse"; };
+		      };
+		    };
+		  }];
+	      };
+	    };
+	  };
+	};
+      };
+    };
+  };
+}
+
+// NOTE: Pass the token in cookie/metadata
+message PublicKeyListRequest {}
+
+message PublicKeyListResponse {
+  repeated string keys = 1;
+  google.protobuf.Timestamp generated_at = 2;
+}
+
+service TokenRevocationService {
+  rpc VerifyTokenRevocation(VerifyTokenRevocationRequest) returns (VerifyTokenRevocationResponse) {
+    option(google.api.http) = {
+      post: "/token-revocation:verify",
+    };
+
+    option(openapi.v3.operation) = {
+      responses: {
+	response_or_reference: {
+	  name: "default";
+	  value: {
+	    response: {
+	      description: "Error response";
+	      content: {
+		additional_properties: [{
+		    name: "application/json";
+		    value: {
+		      schema: {
+			reference: { _ref: "#/components/schemas/ErrorResponse"; };
+		      };
+		    };
+		  }];
+	      };
+	    };
+	  };
+	};
+      };
+
+      security: [{
+	  additional_properties: [{
+	      name: "BearerAuth";
+	      value: {
+		value: [];
+	      };
+	    }];
+	}];
+    };
+  };
+}
+
+// NOTE: Pass the token in metadata/header
+message VerifyTokenRevocationRequest {}
+
+message VerifyTokenRevocationResponse {
+  bool revoked = 1;
+}

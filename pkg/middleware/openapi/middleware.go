@@ -50,13 +50,23 @@ func validateRequest(req *http.Request, router routers.Router, options *Options)
 	}
 
 	if err := openapi3filter.ValidateRequest(req.Context(), requestValidationInput); err != nil {
+		log.Println(err)
+
 		switch e := err.(type) {
 		case openapi3.MultiError:
 			handler := NewOpenAPIMultipleErrorHandler()
 			handler.Parse(e.Error())
 
+			messages := handler.GetOpenAPIErrors()
+
+			if messages == nil {
+				return http.StatusBadRequest, &ErrorResponse{
+					Message: err.Error(),
+				}
+			}
+
 			return http.StatusBadRequest, &MultipleErrorResponse{
-				Messages: handler.GetOpenAPIErrors(),
+				Messages: messages,
 			}
 
 		case *openapi3filter.SecurityRequirementsError:
@@ -98,13 +108,14 @@ func NewOpenAPIRequestMiddleware(spec *openapi3.T, options *Options) func(http.H
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if err := emptyBearerToken(r.Header.Get("Authorization")); err != nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusUnauthorized)
-				json.NewEncoder(w).Encode(&ErrorResponse{Message: err.Error()})
 
-				return
-			}
+			// if err := emptyBearerToken(r.Header.Get("Authorization")); err != nil {
+			// 	w.Header().Set("Content-Type", "application/json")
+			// 	w.WriteHeader(http.StatusUnauthorized)
+			// 	json.NewEncoder(w).Encode(&ErrorResponse{Message: err.Error()})
+
+			// 	return
+			// }
 
 			if status, errorResponse := validateRequest(r, router, options); errorResponse != nil {
 				w.Header().Set("Content-Type", "application/json")

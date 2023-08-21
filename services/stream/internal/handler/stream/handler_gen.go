@@ -23,14 +23,14 @@ const (
 )
 
 // ErrorResponse defines model for ErrorResponse.
-type ErrorResponse = map[string]interface{}
+type ErrorResponse struct {
+	Message string `json:"message"`
+}
 
 // StreamStartRequest defines model for StreamStartRequest.
 type StreamStartRequest struct {
 	// IngestTemplate The ingest server template. The server will take the user bytes and process them.
 	IngestTemplate string `json:"ingestTemplate"`
-	Password       string `json:"password"`
-	Username       string `json:"username"`
 }
 
 // StreamStartResponse defines model for StreamStartResponse.
@@ -41,6 +41,12 @@ type StreamStartResponse struct {
 	IngestServer *string `json:"ingestServer,omitempty"`
 }
 
+// StreamStatResponse defines model for StreamStatResponse.
+type StreamStatResponse = map[string]interface{}
+
+// StreamStopResponse defines model for StreamStopResponse.
+type StreamStopResponse = map[string]interface{}
+
 // StreamingServiceStreamStartJSONRequestBody defines body for StreamingServiceStreamStart for application/json ContentType.
 type StreamingServiceStreamStartJSONRequestBody = StreamStartRequest
 
@@ -49,6 +55,12 @@ type ServerInterface interface {
 
 	// (POST /stream:start)
 	StreamingServiceStreamStart(w http.ResponseWriter, r *http.Request)
+
+	// (GET /stream:stat)
+	StreamingServiceStreamStat(w http.ResponseWriter, r *http.Request)
+
+	// (POST /stream:stop)
+	StreamingServiceStreamStop(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -57,6 +69,16 @@ type Unimplemented struct{}
 
 // (POST /stream:start)
 func (_ Unimplemented) StreamingServiceStreamStart(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /stream:stat)
+func (_ Unimplemented) StreamingServiceStreamStat(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /stream:stop)
+func (_ Unimplemented) StreamingServiceStreamStop(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -77,6 +99,40 @@ func (siw *ServerInterfaceWrapper) StreamingServiceStreamStart(w http.ResponseWr
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.StreamingServiceStreamStart(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// StreamingServiceStreamStat operation middleware
+func (siw *ServerInterfaceWrapper) StreamingServiceStreamStat(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StreamingServiceStreamStat(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// StreamingServiceStreamStop operation middleware
+func (siw *ServerInterfaceWrapper) StreamingServiceStreamStop(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StreamingServiceStreamStop(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -202,6 +258,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/stream:start", wrapper.StreamingServiceStreamStart)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/stream:stat", wrapper.StreamingServiceStreamStat)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/stream:stop", wrapper.StreamingServiceStreamStop)
+	})
 
 	return r
 }
@@ -209,16 +271,17 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/7RUwW7bMAz9FYEbsIsRZ+tOvrXYDsWGbWh6K3JQZCZWZ0sqSbcLCv37INlp4iRALtvN",
-	"kJ/Ix/ce9QrGd8E7dMJQvQKbBjudP78SebpDDt4xpgPZBoQK/OoRjUAsYCGEuluIJrnDpx5ZEiyQD0hi",
-	"MVexboMs99iFVksuUyMbskGsd1DBfYNqwChGekZSMmJnKv0bD19s2yrRv1FJg6pnJLXaCrLSrlaBvEHm",
-	"9KubQQGd/vMd3UYaqD4XO9osZN0m0Q6a+cVTncgcQK/OQFMjpzu8CI0FED71lrCG6uF46oNCB+2XxQVJ",
-	"99JPNcVjZ94TrqGCd+XezHJ0spzaGIuR2yLret6PLz8Wyq/f/PCKE5/RJus2g/6cqSa9T7U4misWwGh6",
-	"srJdJFrDGDeoCem6T4qOyUuXVvl4X7YRCRBjZr72CWq8E21S2GJxhn7ibQ2qRru6xZGn0iZDCmitwVG3",
-	"wVpIqoiVNn0PBli3WYxVrn/dQgHPSDx0mM/ms4/phg/odLBQwdVsPrvKzkqTJyuHnlXWLfvnh92Yks02",
-	"73RUt/KBFTe+b2tlCLWgcviirGPRzmByZLooq+1+VyDzIZ0q39Zn5jgIFgxZRZYbX293gqLLDHUIrTW5",
-	"TvnIiebuUbgUtDOvQZzuhVCP+WAIY5bq03z+fxjsAh9PMvLzG+Szte5b+WfNj/bstG0GKNoj9ksB1cN0",
-	"HR6WMb0OesPpNTn2EpZxuJ1iwPlyT+24KlyVZeuNbpuUuYMyb3E/KReX8W8AAAD//58pCCMIBgAA",
+	"H4sIAAAAAAAC/+RVPW/bPBD+K8S9L9BFsNwGXbQlaIegRVvE2QIPNHWWmEokwzslNQL994InOf5MnaHp",
+	"0E4WyCPv+Tr6EYxvg3fomKB4BDI1tlo+P8bo4xVS8I4wLYToA0a2KNstEulKNngVEAogjtZV0PcZRLzr",
+	"bMQSipunwnm2LvSLWzQMfQYzjqjbGevIV3jXIfFhI+sqJL7GNjSapV+JZKINbL2DAq5rVEONIoz3GBWP",
+	"tROV9sbFB9s0ivV3VFyj6gijWqwYSWlXqhC9QaK01U4gg1b/+Iyu4hqK99PsBME9gCd5Pqco7gv+f8Ql",
+	"FPBfvvEoHw3Kd93psxHFTMgeF+nDl5nyyyeRvKKEZ9TOumoQhQRqEuGQ9fO8dmg9W+bDL8r6DAhNFy2v",
+	"ZonkIMoF6ojxvEtWjPFMhxayvAFZMwfoe9Fh6VOp8Y61SXnqsyNiJBWsQVVrVzY4slbaSEkGjTU4wnRa",
+	"OiYebLlJ3wMf66rZeMv5t0vI4B4jDR2mk+nkbTrhAzodLBRwNplOziCDoLkWZvnQsxAXJA1+iP8uWAnN",
+	"2hV1yW9IUe27plQmomZUDh+UdcTaGUz+7s7CYrUZBxA8UaebL8sjPLZiCkPGkfjCl6u1oOgEoQ6hsUbu",
+	"yW8pwVy/HKdie2Tg+9154tihLAxBEaneTaevg2A9Pv1BRr5+Allb6q7h39Z8b2oP20qBipuKzVBAcbM7",
+	"DjfzPr01uqL0Cu17CfN0eCtkAr1C+XlhDIYUvLYR/5YPPmzP+suM8OFPGLH1Ov+tRsjp9C6SHO5iM/53",
+	"UJHnjTe6qZMxW9c8vf8H1/Xz/mcAAAD//4/NB1o+CQAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

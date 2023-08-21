@@ -53,6 +53,7 @@ func Authenticate(v JWSValidator, ctx context.Context, input *openapi3filter.Aut
 	}
 
 	jws, err := GetJWSFromRequest(input.RequestValidationInput.Request)
+
 	if err != nil {
 		return fmt.Errorf("getting jws: %w", err)
 	}
@@ -162,8 +163,9 @@ func NewFakeAuthenticator() (*FakeAuthenticator, error) {
 }
 
 func (f *FakeAuthenticator) ValidateJWS(jwsString string) (jwt.Token, error) {
-	return jwt.Parse([]byte(jwsString), jwt.WithKeySet(f.KeySet),
-		jwt.WithAudience(FakeAudience), jwt.WithIssuer(FakeIssuer))
+	return jwt.Parse([]byte(jwsString))
+	// return jwt.Parse([]byte(jwsString), jwt.WithKeySet(f.KeySet),
+	// 	jwt.WithAudience(FakeAudience), jwt.WithIssuer(FakeIssuer))
 }
 
 func (f *FakeAuthenticator) SignToken(t jwt.Token) ([]byte, error) {
