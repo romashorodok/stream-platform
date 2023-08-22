@@ -7,18 +7,14 @@
 
 	export let data: PageData;
 
-	$: ({ posts } = data);
-
-	async function login() {
-		const result = fetch('/api/login', {
-			method: 'POST'
-		});
-
-		await result;
-	}
+	// $: ({ posts } = data);
 
 	async function dashboard() {
 		goto('/dashboard/user');
+	}
+
+	async function login() {
+		goto('/login');
 	}
 </script>
 
@@ -33,10 +29,11 @@
 			<button on:click={login} type="button">Login</button>
 		</nav>
 		<div class="flex flex-row flex-1 box-border overflow-hidden">
-			<aside class="w-[220px] theme-bg-base theme-fg-base">
-				<button on:click={() => scheme.light()}>Light mode</button>
-				<button on:click={() => scheme.dark()}>Dark mode</button>
-			</aside>
+			<!-- <aside class="w-[220px] theme-bg-base theme-fg-base"> -->
+			<!-- 	<button on:click={() => scheme.light()}>Light mode</button> -->
+			<!-- 	<button on:click={() => scheme.dark()}>Dark mode</button> -->
+			<!-- </aside> -->
+
 			<main class="flex-1 overflow-y-scroll">
 				<slot />
 			</main>
@@ -91,8 +88,6 @@
 	}
 
 	:global(.theme-bg-error) {
-		@apply shadow-[1px_1px_10px_black];
-
 		background: var(--color-background-error);
 	}
 
