@@ -142,6 +142,7 @@ func main() {
 		AllowedOrigins: []string{"https://*", "http://*"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
 	}))
 
 	fx.New(

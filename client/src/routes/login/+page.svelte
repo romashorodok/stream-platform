@@ -2,6 +2,7 @@
 	import Input from '$lib/components/base/input.svelte';
 	import { useForm } from '$lib/stateful/form';
 	import * as yup from 'yup';
+	import { login } from '$lib/stores/auth';
 
 	const schema = yup.object({
 		username: yup
@@ -22,11 +23,12 @@
 
 	$: ({ password, username } = state);
 
-	function OnLogin(e: CustomEvent<Schema>) {
+	async function OnLogin(e: CustomEvent<Schema>) {
 		const payload = e.detail;
-
-		console.log(payload);
+		login(payload);
 	}
+
+	// export let form: ActionData;
 </script>
 
 {$password}
@@ -37,7 +39,7 @@
 		<div class="flex flex-col h-full w-full px-8 py-9">
 			<h1 class="text-2xl">Login</h1>
 
-			<form use:FormAction on:valid={OnLogin} class="h-full">
+			<form use:FormAction on:valid={OnLogin} class="h-full" method="POST">
 				<Input label="Username" {...fields.username} />
 				<Input label="Password" {...fields.password} />
 

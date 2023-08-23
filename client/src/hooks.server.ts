@@ -1,22 +1,23 @@
-import { redirect, type Handle, type HandleFetch } from '@sveltejs/kit';
+import { type Handle, type HandleFetch, json } from '@sveltejs/kit';
 
-import { env as publicEnv } from '$env/dynamic/public';
-import { env as privateEnv } from '$env/dynamic/private';
 import { sequence } from '@sveltejs/kit/hooks';
+import { env } from '$env/dynamic/public';
+import { mapCookiesFromHeader } from '$lib/utils/cookie';
 
-export const SESSION = '__session_id' as const;
+export const _REFRESH_TOKEN = '_refresh_token' as const;
+
+const VERIFY_ROUTE = `${env.PUBLIC_IDENTITY_SERVICE}/token-revocation:verify` as const;
+const REFRESH_TOKEN_ROUTE = `${env.PUBLIC_IDENTITY_SERVICE}/access-token` as const;
 
 export const handleFetch: HandleFetch = (async ({ request, fetch, event: { cookies } }) => {
-	console.log("Fetch hook set auth token form cookie on server side");
-	console.log("cookies ", cookies)
 
-	console.log("Internal credential", privateEnv.INTERNAL);
+	if (request.url === VERIFY_ROUTE || request.url === REFRESH_TOKEN_ROUTE) {
+		const refreshToken = cookies.get(_REFRESH_TOKEN);
 
-	console.log("I'm on client side token", publicEnv.PUBLIC_TOKEN)
-	console.log("I'm on host ", publicEnv.PUBLIC_STREAM_HOST)
+		if (!refreshToken)
+			return json({ message: "missing refresh token" }, { status: 401 });
 
-	if (request.url.startsWith(publicEnv.PUBLIC_STREAM_HOST)) {
-		request.headers.set('Authorization', `Bearer ${publicEnv.PUBLIC_TOKEN}`);
+		request.headers.set('Authorization', `Bearer ${refreshToken}`);
 	}
 
 	const resp = await fetch(request);
@@ -26,21 +27,64 @@ export const handleFetch: HandleFetch = (async ({ request, fetch, event: { cooki
 	return resp
 }) satisfies HandleFetch;
 
-const publicRoutes = [
-	"/",
-	"/api/login"
-];
+const verifyTokenHook: Handle = async ({ resolve, event }): Promise<any> => {
+	const { cookies } = event;
 
-const sessionHook: Handle = async ({ resolve, event }): Promise<any> => {
-	const sessionId = event.cookies.get(SESSION);
+	const refreshToken = cookies.get(_REFRESH_TOKEN);
 
-	if (!sessionId && !publicRoutes.includes(event.url.pathname)) {
-		console.log("Unauth access");
-		// TODO: Remove all from storage 
-		throw redirect(303, '/');
+	if (!refreshToken)
+		return resolve(event)
+
+
+	try {
+		const response = await event.fetch(VERIFY_ROUTE, {
+			method: 'POST'
+		});
+
+		if (response.status === 500) {
+			cookies.delete(_REFRESH_TOKEN)
+			return await resolve(event);
+		}
+
+		event.locals.identityPayload = await response.json();
+
+		console.log(`Render page for user identity: ${JSON.stringify(event.locals.identityPayload)}`)
+	} catch (e) {
+		console.log(e)
 	}
 
 	return resolve(event)
 }
 
-export const handle: Handle = sequence(sessionHook) satisfies Handle;
+const setFreshAccessTokenFuncHook: Handle = async ({ resolve, event }): Promise<any> => {
+	const { cookies, fetch } = event;
+
+	const refreshToken = cookies.get(_REFRESH_TOKEN);
+
+	if (!refreshToken)
+		return resolve(event)
+
+	event.locals.getAccessToken = async (): Promise<String | null> => {
+		try {
+			const response = await fetch(REFRESH_TOKEN_ROUTE, { method: 'PUT' })
+
+			const serverCookies = response.headers.get('set-cookie') as string
+
+			await mapCookiesFromHeader(cookies, serverCookies);
+
+			const { access_token } = await response.json()
+
+			return access_token;
+
+		} catch (e) {
+			return null
+		}
+	}
+
+	return resolve(event);
+}
+
+export const handle: Handle = sequence(
+	verifyTokenHook,
+	setFreshAccessTokenFuncHook,
+) satisfies Handle;

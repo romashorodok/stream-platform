@@ -148,6 +148,8 @@ func (h IdentityHandler) TokenRevocationServiceVerifyTokenRevocation(w http.Resp
 		return
 	}
 
+	// TODO: Verify token depends on `token_use` field like refresh_token or access_token
+	// TODO: Add token revocation
 	verified, err := h.securitySvc.ValidateToken(plainToken)
 
 	if err != nil {
@@ -200,6 +202,7 @@ func (h IdentityHandler) TokenServiceExchangeToken(w http.ResponseWriter, r *htt
 		return
 	}
 
+	//TODO: when verify token compere rawToken and token in db, because kid may be same but token may not exists
 	result, err := h.userService.UserExchangeAccessToken(r.Context(), rawRefreshToken)
 	if err != nil {
 		deleteRefreshTokenCookie(w)
