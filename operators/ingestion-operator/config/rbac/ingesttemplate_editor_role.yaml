@@ -12,7 +12,7 @@ metadata:
   name: ingesttemplate-editor-role
 rules:
 - apiGroups:
-  - romashorodok.com
+  - romashorodok.github.io
   resources:
   - ingesttemplates
   verbs:
@@ -24,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - romashorodok.com
+  - romashorodok.github.io
   resources:
   - ingesttemplates/status
   verbs:

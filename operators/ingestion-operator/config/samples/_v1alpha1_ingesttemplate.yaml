@@ -1,4 +1,4 @@
-apiVersion: romashorodok.com/v1alpha1
+apiVersion: romashorodok.github.io/v1alpha1
 kind: IngestTemplate
 metadata:
   labels:

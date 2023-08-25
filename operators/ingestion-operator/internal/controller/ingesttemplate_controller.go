@@ -22,9 +22,9 @@ type IngestTemplateReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=romashorodok.com,resources=ingesttemplates,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=romashorodok.com,resources=ingesttemplates/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=romashorodok.com,resources=ingesttemplates/finalizers,verbs=update
+//+kubebuilder:rbac:groups=romashorodok.github.io,resources=ingesttemplates,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=romashorodok.github.io,resources=ingesttemplates/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=romashorodok.github.io,resources=ingesttemplates/finalizers,verbs=update
 
 func (r *IngestTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)

@@ -12,7 +12,7 @@ metadata:
   name: ingesttemplate-viewer-role
 rules:
 - apiGroups:
-  - romashorodok.com
+  - romashorodok.github.io
   resources:
   - ingesttemplates
   verbs:
@@ -20,7 +20,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - romashorodok.com
+  - romashorodok.github.io
   resources:
   - ingesttemplates/status
   verbs:
