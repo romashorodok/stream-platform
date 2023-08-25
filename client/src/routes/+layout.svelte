@@ -1,13 +1,21 @@
 <script lang="ts">
 	import '../app.css';
-	import { scheme } from '$lib/stores/theme';
 	import { goto } from '$app/navigation';
 
 	import type { PageData } from './$types';
+	import { logout } from '$lib/stores/auth';
+	import { accessToken, canAccessProtectedRoutes } from '$lib/stores/auth';
+	import { onMount } from 'svelte';
 
 	export let data: PageData;
 
-	// $: ({ posts } = data);
+	onMount(() => {
+		const unsubscribe = accessToken.subscribe((token) => {
+			canAccessProtectedRoutes.set(!!token);
+		});
+
+		return unsubscribe;
+	});
 
 	async function dashboard() {
 		goto('/dashboard/user');
@@ -25,8 +33,9 @@
 		>
 			<a href="/">Home</a>
 
-			<button on:click={dashboard}>My dashboard</button>
-			<button on:click={login} type="button">Login</button>
+			<button on:click={dashboard} type="button">My dashboard</button>
+			<button on:click={login} type="button">Log In</button>
+			<button on:click={logout} type="button">Log Out</button>
 		</nav>
 		<div class="flex flex-row flex-1 box-border overflow-hidden">
 			<!-- <aside class="w-[220px] theme-bg-base theme-fg-base"> -->

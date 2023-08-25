@@ -134,7 +134,7 @@ func (s *IngestControllerService) StartServer(context context.Context, req *inge
 
 	ingestFactory := NewIngestDeploymentFactory(s.client, *ingestTemplate, &IngestServerDeploymentOpts{
 		Name:      req.Deployment,
-		Namespace: "default",
+		Namespace: req.Namespace,
 		Replicas:  1,
 	})
 
@@ -145,7 +145,10 @@ func (s *IngestControllerService) StartServer(context context.Context, req *inge
 		return nil, status.Errorf(codes.Aborted, "unable create deployment. %s", err)
 	}
 
-	return &ingestioncontrollerpb.StartServerResponse{}, nil
+	return &ingestioncontrollerpb.StartServerResponse{
+		Deployment: ingestDeployment.Name,
+		Namespace:  ingestDeployment.Namespace,
+	}, nil
 }
 
 func (s *IngestControllerService) StopServer(context context.Context, req *ingestioncontrollerpb.StopServerRequest) (*ingestioncontrollerpb.StopServerResponse, error) {

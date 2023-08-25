@@ -14,10 +14,7 @@ declare global {
 		// interface Platform {}
 
 		interface PageData {
-			user: {
-				identity: IdentityTokenPayload | null,
-				accessToken: String | null,
-			}
+			fetch: (input: RequestInfo | URL, init?: RequestInit | undefined) => Promise<Response>
 		}
 
 		interface Locals {

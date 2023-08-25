@@ -110,7 +110,7 @@ func (h IdentityHandler) PublicKeyServicePublicKeyList(w http.ResponseWriter, r 
 		log.Println("Empty token")
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusPreconditionFailed)
 
 		json.NewEncoder(w).Encode(ErrorResponse{
 			Message: fmt.Sprintf(
@@ -138,7 +138,7 @@ func (h IdentityHandler) TokenRevocationServiceVerifyTokenRevocation(w http.Resp
 
 	if plainToken == "" {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusPreconditionFailed)
 
 		json.NewEncoder(w).Encode(ErrorResponse{
 			Message: fmt.Sprintf(
@@ -182,7 +182,7 @@ func (h IdentityHandler) TokenServiceExchangeToken(w http.ResponseWriter, r *htt
 	if err != nil {
 		deleteRefreshTokenCookie(w)
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusPreconditionFailed)
 
 		json.NewEncoder(w).Encode(ErrorResponse{
 			Message: fmt.Sprintf("Error when getting cookie from request. Error: %s", err),
@@ -194,7 +194,7 @@ func (h IdentityHandler) TokenServiceExchangeToken(w http.ResponseWriter, r *htt
 	if rawRefreshToken == "" {
 		deleteRefreshTokenCookie(w)
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusPreconditionFailed)
 
 		json.NewEncoder(w).Encode(ErrorResponse{
 			Message: fmt.Sprintf("Empty refresh token. Error: %s", err),
@@ -230,7 +230,7 @@ func (h *IdentityHandler) IdentityServiceSignOut(w http.ResponseWriter, r *http.
 	if err != nil {
 		deleteRefreshTokenCookie(w)
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusPreconditionFailed)
 
 		json.NewEncoder(w).Encode(ErrorResponse{
 			Message: fmt.Sprintf("Error when getting cookie from request. Error: %s", err),
@@ -242,7 +242,7 @@ func (h *IdentityHandler) IdentityServiceSignOut(w http.ResponseWriter, r *http.
 	if rawRefreshToken == "" {
 		deleteRefreshTokenCookie(w)
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusPreconditionFailed)
 
 		json.NewEncoder(w).Encode(ErrorResponse{
 			Message: fmt.Sprintf("Empty refresh token. Error: %s", err),

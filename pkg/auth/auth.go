@@ -14,7 +14,12 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
+	// "github.com/lestrrat-go/jwx/v2/jwa"
+	// "github.com/lestrrat-go/jwx/v2/jwk"
+	// "github.com/lestrrat-go/jwx/v2/jws"
+	// "github.com/lestrrat-go/jwx/v2/jwt"
 )
+
 
 type JWSValidator interface {
 	ValidateJWS(jws string) (jwt.Token, error)

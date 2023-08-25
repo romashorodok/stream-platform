@@ -1,8 +1,10 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE active_streams (
     id UUID NOT NULL DEFAULT uuid_generate_v4(),
-    broadcaster_id INTEGER NOT NULL,
+
+    broadcaster_id UUID NOT NULL UNIQUE,
+    username VARCHAR(30) NOT NULL UNIQUE,
+
     namespace VARCHAR(50) NOT NULL,
     deployment VARCHAR(50) NOT NULL UNIQUE,
     start_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
@@ -10,4 +12,3 @@ CREATE TABLE active_streams (
     PRIMARY KEY (id)
 );
 
-CREATE SEQUENCE active_streams_id_seq;

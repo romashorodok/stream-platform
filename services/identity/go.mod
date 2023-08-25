@@ -14,6 +14,8 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/romashorodok/stream-platform v0.0.0-00010101000000-000000000000
 	go.uber.org/fx v1.20.0
+	golang.org/x/crypto v0.12.0
+	google.golang.org/grpc v1.57.0
 )
 
 require (
@@ -23,6 +25,8 @@ require (
 	github.com/go-openapi/jsonpointer v0.20.0 // indirect
 	github.com/go-openapi/swag v0.22.4 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/google/gnostic v0.6.9 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/invopop/yaml v0.2.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -44,7 +48,12 @@ require (
 	go.uber.org/dig v1.17.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/text v0.12.0 // indirect
+	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230803162519-f966b187b2e5 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

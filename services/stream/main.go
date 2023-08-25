@@ -11,6 +11,8 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	_ "github.com/lib/pq"
+	identitypb "github.com/romashorodok/stream-platform/gen/golang/identity/v1alpha"
 	ingestioncontrollerpb "github.com/romashorodok/stream-platform/gen/golang/ingestion_controller_operator/v1alpha"
 	"github.com/romashorodok/stream-platform/pkg/auth"
 	"github.com/romashorodok/stream-platform/services/stream/internal/handler/stream"
@@ -18,7 +20,6 @@ import (
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	_ "github.com/lib/pq"
 )
 
 type HTTPServerParams struct {
@@ -134,9 +135,40 @@ func WithIngestOperatorClient(params IngestOperatorClientParams) ingestioncontro
 		log.Panicln("Failed to connect to audio service. Error:", err)
 	}
 
-	client := ingestioncontrollerpb.NewIngestControllerServiceClient(conn)
+	return ingestioncontrollerpb.NewIngestControllerServiceClient(conn)
+}
 
-	return client
+type PublicKeyClientConfig struct {
+	Host string
+	Port string
+}
+
+func NewPublicKeyClientConfig() *PublicKeyClientConfig {
+	return &PublicKeyClientConfig{
+		Host: "localhost",
+		Port: "9093",
+	}
+}
+
+type PublicKeyClientParams struct {
+	fx.In
+
+	Config *PublicKeyClientConfig
+}
+
+func WithPublicKeyClient(params PublicKeyClientParams) identitypb.PublicKeyServiceClient {
+	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	conn, err := grpc.Dial(
+		net.JoinHostPort(
+			params.Config.Host,
+			params.Config.Port,
+		), opts...)
+
+	if err != nil {
+		log.Panicln("Failed to connect to audio service. Error:", err)
+	}
+
+	return identitypb.NewPublicKeyServiceClient(conn)
 }
 
 type DatabaseConnectionParams struct {
@@ -147,13 +179,33 @@ type DatabaseConnectionParams struct {
 
 func WithDatabaseConnection(params DatabaseConnectionParams) *sql.DB {
 	uri := params.Dconf.GetURI()
-	db, err := sql.Open(params.Dconf.Driver, uri + "?sslmode=disable")
+	db, err := sql.Open(params.Dconf.Driver, uri+"?sslmode=disable")
 
 	if err != nil {
 		log.Panicf("Unable connect to database %s. Error: %s \n", uri, err)
 	}
 
 	return db
+}
+
+type IdentityPublicKeyResolverParams struct {
+	fx.In
+
+	Client identitypb.PublicKeyServiceClient
+}
+
+func WithIdentityPublicKeyResolver(params IdentityPublicKeyResolverParams) auth.IdentityPublicKeyResolver {
+	return auth.NewGRPCPublicKeyResolver(params.Client)
+}
+
+type AsymmetricEncryptionAuthenticatorParams struct {
+	fx.In
+
+	Resolver auth.IdentityPublicKeyResolver
+}
+
+func WithAsymmetricEncryptionAuthenticator(params AsymmetricEncryptionAuthenticatorParams) openapi3filter.AuthenticationFunc {
+	return auth.NewAsymmetricEncryptionAuthenticator(params.Resolver)
 }
 
 func main() {
@@ -173,12 +225,17 @@ func main() {
 
 			WithOpenAPI3FilterOptions,
 			WithIngestOperatorClient,
+			WithPublicKeyClient,
 			WithDatabaseConnection,
+			WithIdentityPublicKeyResolver,
+			WithAsymmetricEncryptionAuthenticator,
 
 			repository.NewActiveStreamRepository,
 
 			NewHTTPConfig,
 			NewDatabaseConfig,
+			NewPublicKeyClientConfig,
+
 			NewHTTPServer,
 		),
 		fx.Invoke(stream.NewStreaminServiceHandler),

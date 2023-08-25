@@ -42,12 +42,13 @@ type userInfo struct {
 
 func (s *UserServiceImpl) userGenerateAccessToken(privateKeyJws, kid string, user userInfo) (string, error) {
 
-	accessToken, err := s.securityService.CreateUserAccessToken(
-		privateKeyJws,
-		kid,
-		user.username,
-		user.claims,
-	)
+	accessToken, err := s.securityService.CreateUserAccessToken(security.CreateUserAccessTokenParams{
+		PrivateKeyJwsMessage: privateKeyJws,
+		Kid:                  kid,
+		Username:             user.username,
+		UserID:               user.userID,
+		Claims:               user.claims,
+	})
 	if err != nil {
 		return "", fmt.Errorf("Unable generate access token. Error: %s", err)
 	}
@@ -57,12 +58,14 @@ func (s *UserServiceImpl) userGenerateAccessToken(privateKeyJws, kid string, use
 
 func (s *UserServiceImpl) userGenerateRefreshToken(tx *sql.Tx, ctx context.Context, privateKeyJws string, kid uuid.UUID, user userInfo) (string, *time.Time, error) {
 
-	refreshToken, expiresAt, err := s.securityService.CreateRefreshToken(
-		privateKeyJws,
-		kid.String(),
-		user.username,
-		user.claims,
-	)
+	refreshToken, expiresAt, err := s.securityService.CreateRefreshToken(security.CreateRefreshTokenParams{
+		PrivateKeyJwsMessage: privateKeyJws,
+		Kid:                  kid.String(),
+		Username:             user.username,
+		UserID:               user.userID,
+		Claims:               user.claims,
+	})
+
 	if err != nil {
 		return "", nil, fmt.Errorf("Unable generate refresh token. Error: %s", err)
 	}
@@ -131,7 +134,13 @@ func (s *UserServiceImpl) userRefreshTokens(tx *sql.Tx, ctx context.Context, kid
 		return nil, fmt.Errorf("Unable find private key. Error: %s", err)
 	}
 
-	accessToken, err := s.securityService.CreateUserAccessToken(pkey.JwsMessage, kid.String(), user.Username, DEFAULT_CLAIMS)
+	accessToken, err := s.securityService.CreateUserAccessToken(security.CreateUserAccessTokenParams{
+		PrivateKeyJwsMessage: pkey.JwsMessage,
+		Kid:                  kid.String(),
+		Username:             user.Username,
+		UserID:               user.ID,
+		Claims:               DEFAULT_CLAIMS,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("Unable create access token. Error: %s", err)
 	}

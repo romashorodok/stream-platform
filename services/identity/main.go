@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/cors"
 	_ "github.com/lib/pq"
 	"github.com/romashorodok/stream-platform/pkg/auth"
+	identitygrpc "github.com/romashorodok/stream-platform/services/identity/internal/grpc/v1alpha/identity"
 	"github.com/romashorodok/stream-platform/services/identity/internal/handler/v1alpha/identity"
 	"github.com/romashorodok/stream-platform/services/identity/internal/security"
 	"github.com/romashorodok/stream-platform/services/identity/internal/storage/postgres/privatekey"
@@ -20,6 +21,7 @@ import (
 	userrepo "github.com/romashorodok/stream-platform/services/identity/internal/storage/postgres/user"
 	"github.com/romashorodok/stream-platform/services/identity/internal/user"
 	"go.uber.org/fx"
+	"google.golang.org/grpc"
 )
 
 type HTTPServerParams struct {
@@ -69,6 +71,47 @@ var router = chi.NewRouter()
 
 func GetRouter() *chi.Mux {
 	return router
+}
+
+type GRPCServerParams struct {
+	fx.In
+
+	Config    *GRPCConfig
+	Lifecycle fx.Lifecycle
+
+	Options []grpc.ServerOption `group:"grpc.ServerOption"`
+}
+
+func NewGRPCServer(params GRPCServerParams) *grpc.Server {
+	server := grpc.NewServer(params.Options...)
+	addr := net.JoinHostPort(params.Config.Host, params.Config.Port)
+
+	params.Lifecycle.Append(fx.Hook{
+		OnStart: func(context.Context) error {
+			ln, err := net.Listen("tcp", addr)
+			if err != nil {
+				return err
+			}
+
+			go server.Serve(ln)
+
+			return nil
+		},
+	})
+
+	return server
+}
+
+type GRPCConfig struct {
+	Port string
+	Host string
+}
+
+func NewGRPConfig() *GRPCConfig {
+	return &GRPCConfig{
+		Host: "localhost",
+		Port: "9093",
+	}
 }
 
 type DatabaseConfig struct {
@@ -137,11 +180,19 @@ func WithOpenAPI3FilterOptions() openapi3filter.Options {
 	return options
 }
 
+func AsGRPCServerOption(f interface{}) interface{} {
+	return fx.Annotate(
+		f,
+		fx.As(new(grpc.ServerOption)),
+		fx.ResultTags(`group:"grpc.ServerOption"`),
+	)
+}
+
 func main() {
 	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"https://*", "http://*"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
 	}))
 
@@ -167,8 +218,14 @@ func main() {
 
 			NewHTTPConfig,
 			NewHTTPServer,
+
+			AsGRPCServerOption(identitygrpc.NewPublicKeyListInterceptor),
+
+			NewGRPConfig,
+			NewGRPCServer,
 		),
 		fx.Invoke(identity.NewIdentityHandler),
+		fx.Invoke(identitygrpc.NewPublicKeyGRPCService),
 		fx.Invoke(func(*http.Server) {}),
 	).Run()
 }

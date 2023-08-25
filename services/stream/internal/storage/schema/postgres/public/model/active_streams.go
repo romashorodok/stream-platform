@@ -14,7 +14,8 @@ import (
 
 type ActiveStreams struct {
 	ID            uuid.UUID `sql:"primary_key"`
-	BroadcasterID int32
+	BroadcasterID uuid.UUID
+	Username      string
 	Namespace     string
 	Deployment    string
 	StartAt       time.Time

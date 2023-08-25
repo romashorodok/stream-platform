@@ -24,18 +24,34 @@ type SecurityServiceImpl struct {
 	userRepository         *user.UserRepository
 }
 
-func (s *SecurityServiceImpl) CreateUserAccessToken(privateKeyJws, kid, username string, claims []string) (string, error) {
+type CreateUserAccessTokenParams struct {
+	PrivateKeyJwsMessage string
+	Kid                  string
+	Username             string
+	Claims               []string
+	UserID               uuid.UUID
+}
+
+func (s *SecurityServiceImpl) CreateUserAccessToken(params CreateUserAccessTokenParams) (string, error) {
 	expiresAt := time.Now().Add(time.Minute * 1)
 
-	token, err := s.CreateToken(username, claims, expiresAt)
+	token, err := s.CreateToken(params.Username, params.Claims, expiresAt)
 	if err != nil {
 		return "", fmt.Errorf("Unable create access token. Error: %s", err)
 	}
 
-	headers := jws.NewHeaders()
-	headers.Set(jws.KeyIDKey, kid)
+	if err = token.Set("user:id", params.UserID); err != nil {
+		return "", fmt.Errorf("Unable set `user:id` claim. Error: %s", err)
+	}
 
-	signed, err := s.signToken(privateKeyJws, headers, token)
+	if err = token.Set("token:use", "access_token"); err != nil {
+		return "", fmt.Errorf("unable set `token:use` claim. Error: %s", err)
+	}
+
+	headers := jws.NewHeaders()
+	headers.Set(jws.KeyIDKey, params.Kid)
+
+	signed, err := s.signToken(params.PrivateKeyJwsMessage, headers, token)
 	if err != nil {
 		return "", fmt.Errorf("Unable sign token. Error: %s", err)
 	}
@@ -43,18 +59,34 @@ func (s *SecurityServiceImpl) CreateUserAccessToken(privateKeyJws, kid, username
 	return string(signed), err
 }
 
-func (s *SecurityServiceImpl) CreateRefreshToken(privateKeyJws, kid, username string, claims []string) (string, *time.Time, error) {
+type CreateRefreshTokenParams struct {
+	PrivateKeyJwsMessage string
+	Kid                  string
+	Username             string
+	Claims               []string
+	UserID               uuid.UUID
+}
+
+func (s *SecurityServiceImpl) CreateRefreshToken(params CreateRefreshTokenParams) (string, *time.Time, error) {
 	expiresAt := time.Now().AddDate(1, 0, 0)
 
-	token, err := s.CreateToken(username, claims, expiresAt)
+	token, err := s.CreateToken(params.Username, params.Claims, expiresAt)
 	if err != nil {
 		return "", nil, fmt.Errorf("Unable create refresh token. Error: %s", err)
 	}
 
-	headers := jws.NewHeaders()
-	headers.Set(jws.KeyIDKey, kid)
+	if err = token.Set("user:id", params.UserID); err != nil {
+		return "", nil, fmt.Errorf("Unable set `user:id` claim. Error: %s", err)
+	}
 
-	signed, err := s.signToken(privateKeyJws, headers, token)
+	if err = token.Set("token:use", "refresh_token"); err != nil {
+		return "", nil, fmt.Errorf("unable set `token:use` claim. Error: %s", err)
+	}
+
+	headers := jws.NewHeaders()
+	headers.Set(jws.KeyIDKey, params.Kid)
+
+	signed, err := s.signToken(params.PrivateKeyJwsMessage, headers, token)
 	if err != nil {
 		return "", nil, fmt.Errorf("Unable sign refresh token. Error: %s", err)
 	}

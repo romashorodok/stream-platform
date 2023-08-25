@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
 	ingestioncontrollerpb "github.com/romashorodok/stream-platform/gen/golang/ingestion_controller_operator/v1alpha"
+	"github.com/romashorodok/stream-platform/pkg/auth"
 	"github.com/romashorodok/stream-platform/pkg/middleware/openapi"
 	"github.com/romashorodok/stream-platform/services/stream/internal/storage/postgress/repository"
 	"go.uber.org/fx"
@@ -27,12 +29,12 @@ type StreamingService struct {
 
 var _ ServerInterface = (*StreamingService)(nil)
 
-var (
-	username        = "testusername"
-	namespace       = "default"
-	deployment_name = username
-	user_id         = 1
-)
+// var (
+// 	username        = "testusername"
+// 	namespace       = "default"
+// 	deployment_name = username
+// 	user_id         = 1
+// )
 
 func (s *StreamingService) StreamingServiceStreamStart(w http.ResponseWriter, r *http.Request) {
 	var request StreamStartRequest
@@ -50,11 +52,26 @@ func (s *StreamingService) StreamingServiceStreamStart(w http.ResponseWriter, r 
 		return
 	}
 
+	token, err := auth.WithTokenPayload(r.Context())
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusPreconditionFailed)
+
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Message: fmt.Sprintf(
+				"Not found user token payload. Error: %s",
+				err.Error(),
+			),
+		})
+		return
+	}
+
 	response, err := s.ingestController.StartServer(
 		r.Context(),
 		&ingestioncontrollerpb.StartServerRequest{
-			IngestTemplate: request.IngestTemplate,
-			Deployment:     username,
+			IngestTemplate: "alpine-template",
+			Deployment:     token.Sub,
+			Namespace:      "default",
 		},
 	)
 
@@ -74,6 +91,16 @@ func (s *StreamingService) StreamingServiceStreamStart(w http.ResponseWriter, r 
 					),
 				})
 
+			case codes.Aborted:
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusConflict)
+
+				json.NewEncoder(w).Encode(ErrorResponse{
+					Message: fmt.Sprintf(
+						"Ingest server already running or something went wrong on ingest operator. Error: %s",
+						e.Message(),
+					),
+				})
 			}
 
 			return
@@ -91,19 +118,20 @@ func (s *StreamingService) StreamingServiceStreamStart(w http.ResponseWriter, r 
 		return
 	}
 
-	// TODO: get from here dns or something
-	_ = response
-
 	model, err := s.activeStreamRepo.InsertActiveStream(
-		uint32(user_id),
-		namespace,
-		deployment_name,
+		token.UserID,
+		token.Sub,
+		response.Namespace,
+		response.Deployment,
 	)
+
+	log.Println(err)
+	log.Println(model)
 
 	if err != nil {
 		_, _ = s.ingestController.StopServer(r.Context(), &ingestioncontrollerpb.StopServerRequest{
-			Namespace:  namespace,
-			Deployment: username,
+			Namespace:  model.Namespace,
+			Deployment: model.Deployment,
 		})
 
 		w.Header().Set("Content-Type", "application/json")
@@ -124,7 +152,22 @@ func (s *StreamingService) StreamingServiceStreamStart(w http.ResponseWriter, r 
 func (s *StreamingService) StreamingServiceStreamStop(w http.ResponseWriter, r *http.Request) {
 	// TODO: Get user_id from token
 
-	stream, err := s.activeStreamRepo.GetActiveStreamByBroadcasterId(uint32(user_id))
+	token, err := auth.WithTokenPayload(r.Context())
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusPreconditionFailed)
+
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Message: fmt.Sprintf(
+				"Not found user token payload. Error: %s",
+				err.Error(),
+			),
+		})
+		return
+	}
+	log.Println(token)
+
+	stream, err := s.activeStreamRepo.GetActiveStreamByBroadcasterId(token.UserID)
 
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -155,7 +198,7 @@ func (s *StreamingService) StreamingServiceStreamStop(w http.ResponseWriter, r *
 		return
 	}
 
-	if err = s.activeStreamRepo.DeleteActiveStreamByBroadcasterId(uint32(stream.BroadcasterID)); err != nil {
+	if err = s.activeStreamRepo.DeleteActiveStreamByBroadcasterId(stream.BroadcasterID); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 
@@ -177,6 +220,8 @@ type StreamingServiceParams struct {
 	FilterOptions    openapi3filter.Options
 	IngestController ingestioncontrollerpb.IngestControllerServiceClient
 	ActiveStreamRepo *repository.ActiveStreamRepository
+
+	AuthAsymm openapi3filter.AuthenticationFunc
 }
 
 func NewStreaminServiceHandler(params StreamingServiceParams) *StreamingService {
@@ -195,6 +240,7 @@ func NewStreaminServiceHandler(params StreamingServiceParams) *StreamingService 
 				return fmt.Errorf("unable get openapi spec. %s", err)
 			}
 
+			params.FilterOptions.AuthenticationFunc = params.AuthAsymm
 			params.Router.Use(openapi.NewOpenAPIRequestMiddleware(spec, &openapi.Options{
 				Options: params.FilterOptions,
 			}))

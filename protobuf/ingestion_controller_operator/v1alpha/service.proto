@@ -10,11 +10,14 @@ service IngestControllerService {
 }
 
 message StartServerRequest {
-  string deployment = 1;
-  string ingest_template = 2;
+  string ingest_template = 1;
+  string deployment = 2;
+  string namespace = 3;
 }
 
 message StartServerResponse {
+  string deployment = 1;
+  string namespace = 2;
 }
 
 message StopServerRequest {

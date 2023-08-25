@@ -1,13 +1,8 @@
-import { type Handle, type HandleFetch, json } from '@sveltejs/kit';
+import { type Handle, type HandleFetch, json, redirect } from '@sveltejs/kit';
 
 import { sequence } from '@sveltejs/kit/hooks';
-import { env } from '$env/dynamic/public';
 import { mapCookiesFromHeader } from '$lib/utils/cookie';
-
-export const _REFRESH_TOKEN = '_refresh_token' as const;
-
-const VERIFY_ROUTE = `${env.PUBLIC_IDENTITY_SERVICE}/token-revocation:verify` as const;
-const REFRESH_TOKEN_ROUTE = `${env.PUBLIC_IDENTITY_SERVICE}/access-token` as const;
+import { REFRESH_TOKEN_ROUTE, VERIFY_ROUTE, _REFRESH_TOKEN } from '$lib';
 
 export const handleFetch: HandleFetch = (async ({ request, fetch, event: { cookies } }) => {
 
@@ -84,7 +79,28 @@ const setFreshAccessTokenFuncHook: Handle = async ({ resolve, event }): Promise<
 	return resolve(event);
 }
 
+const protectedRoutes = ['/dashboard'];
+
+const handleProtectedRoutes: Handle = async ({ event, resolve }) => {
+	const { locals } = event;
+
+	const containsAtLeastOne = protectedRoutes.some((route) => event.url.pathname.startsWith(route))
+
+	if (protectedRoutes.includes(event.url.pathname) || containsAtLeastOne) {
+		if (!locals.getAccessToken || !locals.identityPayload) {
+			console.log("Redirect to page /")
+			throw redirect(301, "/")
+		}
+
+		console.log("Hit protected route", event.url.pathname)
+
+	}
+
+	return resolve(event)
+}
+
 export const handle: Handle = sequence(
 	verifyTokenHook,
 	setFreshAccessTokenFuncHook,
+	handleProtectedRoutes,
 ) satisfies Handle;

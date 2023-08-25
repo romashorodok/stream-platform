@@ -16,29 +16,33 @@ type ActiveStreamRepository struct {
 
 type InsertActiveStreamResponse struct {
 	ID            uuid.UUID
-	BroadcasterID int32
+	BroadcasterID uuid.UUID
+	Username      string
 	Namespace     string
 	Deployment    string
 }
 
-func (r *ActiveStreamRepository) InsertActiveStream(broadcaster_id uint32, namespace, deployment string) (*InsertActiveStreamResponse, error) {
+func (r *ActiveStreamRepository) InsertActiveStream(broadcasterID uuid.UUID, username, namespace, deployment string) (*InsertActiveStreamResponse, error) {
 
 	var model models.ActiveStreams
 
 	err := ActiveStreams.
 		INSERT(
 			ActiveStreams.BroadcasterID,
+			ActiveStreams.Username,
 			ActiveStreams.Namespace,
 			ActiveStreams.Deployment,
 		).
 		VALUES(
-			broadcaster_id,
+			broadcasterID,
+			username,
 			namespace,
 			deployment,
 		).
 		RETURNING(
 			ActiveStreams.ID,
 			ActiveStreams.BroadcasterID,
+			ActiveStreams.Username,
 			ActiveStreams.Namespace,
 			ActiveStreams.Deployment,
 		).
@@ -56,24 +60,26 @@ func (r *ActiveStreamRepository) InsertActiveStream(broadcaster_id uint32, names
 	}, nil
 }
 
-func (r *ActiveStreamRepository) DeleteActiveStreamByBroadcasterId(broadcaster_id uint32) error {
+func (r *ActiveStreamRepository) DeleteActiveStreamByBroadcasterId(broadcasterID uuid.UUID) error {
 	_, err := ActiveStreams.DELETE().
-		WHERE(ActiveStreams.BroadcasterID.EQ(Uint32(broadcaster_id))).
+		WHERE(ActiveStreams.BroadcasterID.EQ(UUID(broadcasterID))).
 		Exec(r.db)
 
 	return err
 }
 
 type GetActiveStreamByBroadcasterIdResponse struct {
-	ID            uuid.UUID `sql:"primary_key"`
-	BroadcasterID int32
+	ID            uuid.UUID
+	BroadcasterID uuid.UUID
 	Namespace     string
 	Deployment    string
 }
 
-func (r *ActiveStreamRepository) GetActiveStreamByBroadcasterId(broadcaster_id uint32) (*GetActiveStreamByBroadcasterIdResponse, error) {
+func (r *ActiveStreamRepository) GetActiveStreamByBroadcasterId(broadcasterID uuid.UUID) (*GetActiveStreamByBroadcasterIdResponse, error) {
 	var model models.ActiveStreams
-	err := SELECT(ActiveStreams.AllColumns).FROM(ActiveStreams.Table).Query(r.db, &model)
+	err := SELECT(ActiveStreams.AllColumns).FROM(ActiveStreams.Table).
+		WHERE(ActiveStreams.BroadcasterID.EQ(UUID(broadcasterID))).
+		Query(r.db, &model)
 
 	if err != nil {
 		return nil, err

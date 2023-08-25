@@ -11,6 +11,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
+	"github.com/romashorodok/stream-platform/pkg/auth"
 )
 
 type ErrorHandler func(w http.ResponseWriter, message string, statusCode int)
@@ -32,11 +33,11 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-func validateRequest(req *http.Request, router routers.Router, options *Options) (int, interface{}) {
+func validateRequest(req *http.Request, router routers.Router, options *Options) (*http.Request, int, interface{}) {
 	route, pathParams, err := router.FindRoute(req)
 
 	if err != nil {
-		return http.StatusNotFound, &ErrorResponse{Message: err.Error()}
+		return req, http.StatusNotFound, &ErrorResponse{Message: err.Error()}
 	}
 
 	requestValidationInput := &openapi3filter.RequestValidationInput{
@@ -50,9 +51,12 @@ func validateRequest(req *http.Request, router routers.Router, options *Options)
 	}
 
 	if err := openapi3filter.ValidateRequest(req.Context(), requestValidationInput); err != nil {
-		log.Println(err)
+		if securityError := strings.HasSuffix(err.Error(), auth.GetSecurityErrorPrefix()); securityError {
+			return req, http.StatusUnauthorized, &ErrorResponse{Message: err.Error()}
+		}
 
 		switch e := err.(type) {
+
 		case openapi3.MultiError:
 			handler := NewOpenAPIMultipleErrorHandler()
 			handler.Parse(e.Error())
@@ -60,27 +64,27 @@ func validateRequest(req *http.Request, router routers.Router, options *Options)
 			messages := handler.GetOpenAPIErrors()
 
 			if messages == nil {
-				return http.StatusBadRequest, &ErrorResponse{
+				return req, http.StatusBadRequest, &ErrorResponse{
 					Message: err.Error(),
 				}
 			}
 
-			return http.StatusBadRequest, &MultipleErrorResponse{
+			return req, http.StatusBadRequest, &MultipleErrorResponse{
 				Messages: messages,
 			}
 
 		case *openapi3filter.SecurityRequirementsError:
-			return http.StatusUnauthorized, &ErrorResponse{Message: e.Error()}
+			return req, http.StatusUnauthorized, &ErrorResponse{Message: e.Error()}
 
 		case *openapi3filter.RequestError:
-			return http.StatusBadRequest, &ErrorResponse{Message: e.Error()}
+			return req, http.StatusBadRequest, &ErrorResponse{Message: e.Error()}
 
 		default:
-			return http.StatusInternalServerError, &ErrorResponse{Message: e.Error()}
+			return req, http.StatusInternalServerError, &ErrorResponse{Message: e.Error()}
 		}
 	}
 
-	return 0, nil
+	return requestValidationInput.Request, 0, nil
 }
 
 func emptyBearerToken(header string) error {
@@ -108,7 +112,6 @@ func NewOpenAPIRequestMiddleware(spec *openapi3.T, options *Options) func(http.H
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 			// if err := emptyBearerToken(r.Header.Get("Authorization")); err != nil {
 			// 	w.Header().Set("Content-Type", "application/json")
 			// 	w.WriteHeader(http.StatusUnauthorized)
@@ -117,7 +120,8 @@ func NewOpenAPIRequestMiddleware(spec *openapi3.T, options *Options) func(http.H
 			// 	return
 			// }
 
-			if status, errorResponse := validateRequest(r, router, options); errorResponse != nil {
+			nextReq, status, errorResponse := validateRequest(r, router, options)
+			if errorResponse != nil {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(status)
 				json.NewEncoder(w).Encode(errorResponse)
@@ -125,7 +129,7 @@ func NewOpenAPIRequestMiddleware(spec *openapi3.T, options *Options) func(http.H
 				return
 			}
 
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, nextReq)
 		})
 	}
 }

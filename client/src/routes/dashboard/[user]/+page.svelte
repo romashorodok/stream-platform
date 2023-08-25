@@ -1,17 +1,21 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types';
+	import { accessToken } from '$lib/stores/auth';
+
+	export let data: PageData;
+
+	$: ({ fetch } = data);
 
 	const server = {
 		ingestTemplate: 'alpine-template'
 	};
 
 	async function streamStart() {
-		// TODO: Remove hardcode token
 		const resp = await fetch(`${env.PUBLIC_STREAM_HOST}/stream:start`, {
 			body: JSON.stringify(server),
 			headers: {
-				Authorization: `Bearer ${env.PUBLIC_TOKEN}`,
+				Authorization: `Bearer ${$accessToken}`,
 				'Content-Type': 'application/json'
 			},
 			method: 'POST'
@@ -20,12 +24,19 @@
 		console.log(resp);
 	}
 
-	export let data: PageData;
+	async function streamStop() {
+		const resp = await fetch(`${env.PUBLIC_STREAM_HOST}/stream:stop`, {
+			body: JSON.stringify(server),
+			headers: {
+				Authorization: `Bearer ${$accessToken}`,
+				'Content-Type': 'application/json'
+			},
+			method: 'POST'
+		});
 
-	$: console.log(data);
+		console.log(resp);
+	}
 </script>
 
-{data.user.accessToken}
-{JSON.stringify(data.user.identity)}
-
 <button on:click={streamStart}>Start stream</button>
+<button on:click={streamStop}>Stop stream</button>

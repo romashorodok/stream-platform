@@ -26,7 +26,7 @@ func UnaryInterceptorLogrFromZap() grpc.UnaryServerInterceptor {
 	}
 }
 
-func NewServer(client client.Client, log *zap.Logger) *grpc.Server {
+func NewServer(client client.Client /* k8s client */, log *zap.Logger) *grpc.Server {
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(
 			grpc_middleware.ChainUnaryServer(
