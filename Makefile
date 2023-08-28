@@ -1,10 +1,22 @@
 
 cluster:
 	k3d cluster create stream-platform-cluster \
-		--agents 1 \
+		--api-port 6443 \
+		--k3s-arg "--disable=traefik@server:0" \
+		--servers 1 \
+		--agents 2 \
 		-p 8089:8089/TCP@agent:0 \
 		-p 3478:3478/UDP@agent:0 \
-		--registry-create k3d-stream-platform-registry:50000
+		-p 8083:8083/TCP@agent:1 \
+		--registry-create k3d-stream-platform-registry:50000 && kubectl apply -f ./infra/k8s/pvc
+
+# cluster:
+# 	k3d cluster create stream-platform-cluster \
+# 		--agents 2 \
+# 		-p 8089:8089/TCP@agent:0 \
+# 		-p 3478:3478/UDP@agent:0 \
+# 		-p 8083:8083/TCP@agent:1 \
+# 		--registry-create k3d-stream-platform-registry:50000 && kubectl apply -f ./infra/k8s/pvc
 
 delete:
 	k3d cluster delete stream-platform-cluster

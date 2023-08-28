@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/cors"
 	_ "github.com/lib/pq"
 	"github.com/romashorodok/stream-platform/pkg/auth"
+	"github.com/romashorodok/stream-platform/pkg/envutils"
 	identitygrpc "github.com/romashorodok/stream-platform/services/identity/internal/grpc/v1alpha/identity"
 	"github.com/romashorodok/stream-platform/services/identity/internal/handler/v1alpha/identity"
 	"github.com/romashorodok/stream-platform/services/identity/internal/security"
@@ -22,6 +23,34 @@ import (
 	"github.com/romashorodok/stream-platform/services/identity/internal/user"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
+)
+
+const (
+	HTTP_HOST_DEFAULT = "0.0.0.0"
+	HTTP_PORT_DEFAULT = "8083"
+
+	GRPC_HOST_DEFAULT = "0.0.0.0"
+	GRPC_PORT_DEFAULT = "9093"
+
+	DATABASE_HOST_DEFAULT     = "0.0.0.0"
+	DATABASE_PORT_DEFAULT     = "5433"
+	DATABASE_USERNAME_DEFAULT = "user"
+	DATABASE_PASSWORD_DEFAULT = "password"
+	DATABASE_NAME_DEFAULT     = "postgres"
+)
+
+const (
+	HTTP_HOST_VAR = "HTTP_HOST"
+	HTTP_PORT_VAR = "HTTP_PORT"
+
+	GRPC_HOST_VAR = "GRPC_HOST"
+	GRPC_PORT_VAR = "GRPC_PORT"
+
+	DATABASE_HOST_VAR     = "DATABASE_HOST"
+	DATABASE_PORT_VAR     = "DATABASE_PORT"
+	DATABASE_USERNAME_VAR = "DATABASE_USERNAME"
+	DATABASE_PASSWORD_VAR = "DATABASE_PASSWORD"
+	DATABASE_NAME_VAR     = "DATABASE_NAME"
 )
 
 type HTTPServerParams struct {
@@ -62,8 +91,8 @@ type HTTPConfig struct {
 
 func NewHTTPConfig() *HTTPConfig {
 	return &HTTPConfig{
-		Port: "8083",
-		Host: "0.0.0.0",
+		Port: envutils.Env(HTTP_PORT_VAR, HTTP_PORT_DEFAULT),
+		Host: envutils.Env(HTTP_HOST_VAR, HTTP_HOST_DEFAULT),
 	}
 }
 
@@ -109,8 +138,8 @@ type GRPCConfig struct {
 
 func NewGRPConfig() *GRPCConfig {
 	return &GRPCConfig{
-		Host: "localhost",
-		Port: "9093",
+		Host: envutils.Env(GRPC_HOST_VAR, GRPC_HOST_DEFAULT),
+		Port: envutils.Env(GRPC_PORT_VAR, GRPC_PORT_DEFAULT),
 	}
 }
 
@@ -137,11 +166,11 @@ func (dconf *DatabaseConfig) GetURI() string {
 func NewDatabaseConfig() *DatabaseConfig {
 	return &DatabaseConfig{
 		Driver:   "postgres",
-		Username: "user",
-		Password: "password",
-		Host:     "0.0.0.0",
-		Port:     "5433",
-		Database: "postgres",
+		Username: envutils.Env(DATABASE_USERNAME_VAR, DATABASE_USERNAME_DEFAULT),
+		Password: envutils.Env(DATABASE_PASSWORD_VAR, DATABASE_PASSWORD_DEFAULT),
+		Host:     envutils.Env(DATABASE_HOST_VAR, DATABASE_HOST_DEFAULT),
+		Port:     envutils.Env(DATABASE_PORT_VAR, DATABASE_PORT_DEFAULT),
+		Database: envutils.Env(DATABASE_NAME_VAR, DATABASE_NAME_DEFAULT),
 	}
 }
 
@@ -155,7 +184,7 @@ type DatabaseConnectionParams struct {
 func WithDatabaseConnection(params DatabaseConnectionParams) *sql.DB {
 	uri := params.Dconf.GetURI()
 
-	db, err := sql.Open(params.Dconf.Driver, uri+"?sslmode=disable")
+	db, err := sql.Open(params.Dconf.Driver, uri+"?sslmode=disable&connect_timeout=5")
 
 	if err != nil {
 		log.Panicf("Unable connect to database %s. Error: %s \n", uri, err)

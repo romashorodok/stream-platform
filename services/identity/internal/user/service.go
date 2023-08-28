@@ -183,10 +183,11 @@ func (s *UserServiceImpl) RegisterUser(ctx context.Context, username, password s
 		return nil, fmt.Errorf("Unable hash password. Error: %s", err), http.StatusInternalServerError
 	}
 
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Unable start transaction, Error: %s", err), http.StatusInternalServerError
 	}
+	defer tx.Rollback()
 
 	user, err := s.userRepository.InsertUser(tx, ctx, username, string(hashed))
 	if err != nil {
@@ -199,12 +200,10 @@ func (s *UserServiceImpl) RegisterUser(ctx context.Context, username, password s
 		claims:   DEFAULT_CLAIMS,
 	})
 	if err != nil {
-		_ = tx.Rollback()
 		return nil, err, http.StatusInternalServerError
 	}
 
 	if err = tx.Commit(); err != nil {
-		_ = tx.Rollback()
 		return nil, err, http.StatusInternalServerError
 	}
 
@@ -222,10 +221,11 @@ func (s *UserServiceImpl) UserLogin(ctx context.Context, username, password stri
 		return nil, fmt.Errorf("Different password. Error: %s", err), http.StatusUnprocessableEntity
 	}
 
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Unable start transaction. Error: %s", err), http.StatusInternalServerError
 	}
+	defer tx.Rollback()
 
 	result, err := s.userGenerateTokens(tx, ctx, userInfo{
 		userID:   user.ID,
@@ -233,12 +233,10 @@ func (s *UserServiceImpl) UserLogin(ctx context.Context, username, password stri
 		claims:   DEFAULT_CLAIMS,
 	})
 	if err != nil {
-		_ = tx.Rollback()
 		return nil, err, http.StatusInternalServerError
 	}
 
 	if err = tx.Commit(); err != nil {
-		_ = tx.Rollback()
 		return nil, err, http.StatusInternalServerError
 	}
 
@@ -257,19 +255,18 @@ func (s *UserServiceImpl) UserExchangeAccessToken(ctx context.Context, rawRefres
 		return nil, err
 	}
 
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Unable start transaction. Error: %s", err)
 	}
+	defer tx.Rollback()
 
 	tokens, err := s.userRefreshTokens(tx, ctx, *kid)
 	if err != nil {
-		_ = tx.Rollback()
 		return nil, fmt.Errorf("Unable refresh tokens. Error: %s", err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		_ = tx.Rollback()
 		return nil, err
 	}
 
@@ -282,10 +279,11 @@ func (s *UserServiceImpl) UserDeleteRefreshToken(ctx context.Context, rawRefresh
 		return err
 	}
 
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("Unable start transaction. Error: %s", err)
 	}
+	defer tx.Rollback()
 
 	err = s.refreshTokneRepository.DeleteRefreshTokenByPrivateKey(tx, ctx, *kid)
 	if err != nil {
@@ -295,12 +293,10 @@ func (s *UserServiceImpl) UserDeleteRefreshToken(ctx context.Context, rawRefresh
 
 	err = s.privateKeyRepository.DeletePrivateKey(tx, ctx, *kid)
 	if err != nil {
-		_ = tx.Rollback()
 		return fmt.Errorf("Unable delete private key. Error: %s", err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 

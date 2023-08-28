@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "identity.fullname" . }}
+  labels:
+    app: {{ template "identity.name" . }}
+    chart: {{ template "identity.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "identity.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "identity.name" . }}
+    spec:
+      containers:
+        - name: {{ template "identity.name" . }}
+          image: '{{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}'
+          env:
+            - name: HTTP_HOST
+              value: {{ .Values.http.host }}
+            - name: HTTP-PORT
+              value: {{ .Values.deployment.http.port | squote }}
+            - name: DATABASE_HOST 
+              valueFrom:
+                secretKeyRef:
+                  name: '{{ template "identity.fullname" . }}-secret'
+                  key: postgresHost
+            - name: DATABASE_PORT
+              value: {{ .Values.database.port | squote }}
+            - name: DATABASE_USERNAME
+              value: {{ .Values.database.username }}
+            - name: DATABASE_PASSWORD
+              value: {{ .Values.database.password }}
+            - name: DATABASE_NAME
+              value: {{ .Values.database.name }}
+          ports:
+           - containerPort: {{ .Values.deployment.http.port }}
+             protocol: TCP
+             name: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: '{{ template "identity.fullname" . }}-postgres'
+  labels:
+    app: '{{ template "identity.name" . }}-postgres'
+    chart: {{ template "identity.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: '{{ template "identity.name" . }}-postgres'
+  serviceName: '{{ template "identity.name" . }}-postgres'
+  template:
+    metadata:
+      labels:
+        app: '{{ template "identity.name" . }}-postgres'
+    spec:
+      containers:
+        - name: '{{ template "identity.name" . }}-postgres'
+          image: {{ .Values.database.image }}
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.database.name }}
+            - name: POSTGRES_USER
+              value: {{ .Values.database.username }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.database.password }}
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: trust
+          ports:
+           - containerPort: {{ .Values.database.port }}
+             protocol: TCP
+             name: postgres
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: 'identity-postgres-data-pvc'
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: '{{ template "identity.fullname" . }}-migrate-job'
+  labels:
+    app: {{ template "identity.name" . }}
+    chart: {{ template "identity.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  completions: 10
+  backoffLimit: 5
+  template:
+    spec:
+      containers:
+        - name: migrate
+          image: '{{ .Values.job.migrate.image.registry }}/{{ .Values.job.migrate.image.name }}:{{ .Values.job.migrate.image.tag }}'
+          command: [ './migrate', '-db=postgres://{{ .Values.database.username }}:{{ .Values.database.password }}@{{ template "identity.fullname" . }}-postgres.default.svc.cluster.local:{{ .Values.database.port }}/{{ .Values.database.name }}?sslmode=disable', '-migrations=file://identity']
+      restartPolicy: Never

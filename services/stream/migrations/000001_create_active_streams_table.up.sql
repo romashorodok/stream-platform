@@ -1,4 +1,6 @@
 
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE active_streams (
     id UUID NOT NULL DEFAULT uuid_generate_v4(),
 

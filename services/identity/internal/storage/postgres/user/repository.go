@@ -105,8 +105,7 @@ func (r *UserRepository) AttachPrivateKey(q qrm.Executable, ctx context.Context,
 	_, err := UserPrivateKeys.INSERT(
 		UserPrivateKeys.UserID,
 		UserPrivateKeys.PrivateKeyID,
-	).
-		VALUES(user_id, private_key_id).
+	).VALUES(user_id, private_key_id).
 		ExecContext(ctx, q)
 
 	return err

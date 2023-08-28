@@ -1,0 +1,31 @@
+
+image:
+  registry: k3d-stream-platform-registry:5000
+  name: services/identity
+  tag: latest
+
+service:
+  type: LoadBalancer
+
+deployment:
+  http:
+    port: 8083
+
+http:
+  port: 8083
+  host: "0.0.0.0"
+
+# psql -U user -p 5432 postgres
+database:
+  image: postgres:15.4-alpine3.18
+  port: 5432
+  username: "user"
+  password: "password"
+  name: "postgres"
+
+job:
+  migrate:
+    image:
+      registry: k3d-stream-platform-registry:5000
+      name: cmd/migrate
+      tag: latest
