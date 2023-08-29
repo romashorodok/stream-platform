@@ -1,0 +1,17 @@
+
+image:
+  registry: k3d-stream-platform-registry:5000
+  name: operators/ingestion-operator
+  tag: latest
+
+service:
+  type: LoadBalancer
+
+deployment:
+  grpc:
+    port: 9191
+
+grpc:
+  port: 9191
+  host: "0.0.0.0"
+

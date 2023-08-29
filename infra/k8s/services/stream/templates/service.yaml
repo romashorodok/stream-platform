@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "identity.fullname" . }}
+  name: {{ template "stream.fullname" . }}
   labels:
-    app: {{ template "identity.name" . }}
-    chart: {{ template "identity.chart" . }}
+    app: {{ template "stream.name" . }}
+    chart: {{ template "stream.chart" . }}
     release: {{ .Release.Name }}
 spec:
   type: {{ .Values.service.type }}
@@ -12,19 +12,16 @@ spec:
     - port: {{ .Values.deployment.http.port }}
       protocol: TCP
       name: http
-    - port: {{ .Values.deployment.grpc.port }}
-      protocol: TCP
-      name: grpc
   selector:
-    app: {{ template "identity.name" . }}
+    app: {{ template "stream.name" . }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: '{{ template "identity.fullname" . }}-postgres'
+  name: '{{ template "stream.fullname" . }}-postgres'
   labels:
-    app: '{{ template "identity.name" . }}-postgres'
-    chart: {{ template "identity.chart" . }}
+    app: '{{ template "stream.name" . }}-postgres'
+    chart: {{ template "stream.chart" . }}
     release: {{ .Release.Name }}
 spec:
   # NOTE: This is make headless service. It's so important to establish stable and fast database connection. It's load balance through the DNS by round-robin istread of service proxy
@@ -34,4 +31,4 @@ spec:
       protocol: TCP
       name: postgres
   selector:
-    app: '{{ template "identity.name" . }}-postgres'
+    app: '{{ template "stream.name" . }}-postgres'

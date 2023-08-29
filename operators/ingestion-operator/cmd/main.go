@@ -33,6 +33,7 @@ import (
 
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver"
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver/container"
+	"github.com/romashorodok/stream-platform/pkg/envutils"
 
 	uberzap "go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,19 +77,25 @@ func (runnable *GRPCRunnable) Start(ctx context.Context) error {
 }
 
 const (
-	GRPC_HOST = "localhost"
-	GRPC_PORT = ":9191"
+	GRPC_HOST_DEFAULT = "localhost"
+	GRPC_PORT_DEFAULT = "9191"
+
+	GRPC_HOST_VAR = "GRPC_HOST"
+	GRPC_PORT_VAR = "GRPC_PORT"
 )
 
 func NewGRPCRunnable(client client.Client, log *uberzap.Logger) (*GRPCRunnable, error) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s%s", GRPC_HOST, GRPC_PORT))
+	PORT := envutils.Env(GRPC_PORT_VAR, GRPC_PORT_DEFAULT)
+	HOST := envutils.Env(GRPC_HOST_VAR, GRPC_HOST_DEFAULT)
+
+	listener, err := net.Listen("tcp", net.JoinHostPort(HOST, PORT))
 
 	if err != nil {
 		return nil, fmt.Errorf("unable start listener %s", err)
 	}
 
 	logrLogger := zapr.NewLogger(log)
-	logrLogger.Info("Starting serving grpc server", "grpc.addr", GRPC_PORT)
+	logrLogger.Info("Starting serving grpc server", "grpc.addr", PORT)
 
 	return &GRPCRunnable{
 		listener: listener,

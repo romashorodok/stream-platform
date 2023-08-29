@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "client.fullname" . }}
+  labels:
+    app: {{ template "client.name" . }}
+    chart: {{ template "client.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "client.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "client.name" . }}
+    spec:
+      containers:
+        - name: {{ template "client.name" . }}
+          image: '{{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}'
+          env:
+            - name: PUBLIC_STREAM_SERVICE
+              value: {{ .Values.stream.service }}
+            - name: PUBLIC_IDENTITY_SERVICE
+              value: {{ .Values.identity.service }}
+          ports:
+           - containerPort: {{ .Values.deployment.http.port }}
+             protocol: TCP
+             name: http

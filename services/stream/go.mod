@@ -9,7 +9,7 @@ require (
 	github.com/go-jet/jet/v2 v2.10.1
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/uuid v1.3.0
-	github.com/lib/pq v1.10.8
+	github.com/lib/pq v1.10.9
 	github.com/romashorodok/stream-platform v0.0.0-00010101000000-000000000000
 	go.uber.org/fx v1.20.0
 	google.golang.org/grpc v1.57.0

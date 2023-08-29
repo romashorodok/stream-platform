@@ -12,7 +12,7 @@
 	};
 
 	async function streamStart() {
-		const resp = await fetch(`${env.PUBLIC_STREAM_HOST}/stream:start`, {
+		const resp = await fetch(`${env.PUBLIC_STREAM_SERVICE}/stream:start`, {
 			body: JSON.stringify(server),
 			headers: {
 				Authorization: `Bearer ${$accessToken}`,
@@ -25,7 +25,7 @@
 	}
 
 	async function streamStop() {
-		const resp = await fetch(`${env.PUBLIC_STREAM_HOST}/stream:stop`, {
+		const resp = await fetch(`${env.PUBLIC_STREAM_SERVICE}/stream:stop`, {
 			body: JSON.stringify(server),
 			headers: {
 				Authorization: `Bearer ${$accessToken}`,

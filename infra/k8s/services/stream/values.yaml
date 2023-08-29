@@ -1,7 +1,7 @@
 
 image:
   registry: k3d-stream-platform-registry:5000
-  name: services/identity
+  name: services/stream
   tag: latest
 
 service:
@@ -9,16 +9,10 @@ service:
 
 deployment:
   http:
-    port: 8083
-  grpc:
-    port: 9093
+    port: 8082
 
 http:
-  port: 8083
-  host: "0.0.0.0"
-
-grpc:
-  port: 9093
+  port: 8082
   host: "0.0.0.0"
 
 # psql -U user -p 5432 postgres
@@ -28,6 +22,15 @@ database:
   username: "user"
   password: "password"
   name: "postgres"
+
+ingestOperator:
+  host: stream-platform-ingest-operator.default.svc.cluster.local
+  port: 9191
+
+identity:
+  publicKeyService:
+    host: stream-platform-identity.default.svc.cluster.local
+    port: 9093
 
 job:
   migrate:

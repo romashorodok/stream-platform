@@ -4,6 +4,7 @@ FROM golang:1.20.6-alpine3.18 as ingest-builder
 WORKDIR /app
 
 COPY go.mod ./
+COPY go.sum ./
 COPY pkg ./pkg/
 
 RUN go mod download

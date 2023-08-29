@@ -1,0 +1,12 @@
+apiVersion: romashorodok.github.io/v1alpha1
+kind: IngestTemplate
+metadata:
+  labels:
+    app.kubernetes.io/name: ingest
+    app.kubernetes.io/instance: golang-ingest-template
+    app.kubernetes.io/part-of: ingestion-operator
+    app.kubernetes.io/created-by: ingestion-operator
+  name: golang-ingest-template
+spec:
+  image: k3d-stream-platform-registry:5000/services/ingest:latest
+

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "ingest-operator.fullname" . }}
+  labels:
+    app: {{ template "ingest-operator.name" . }}
+    chart: {{ template "ingest-operator.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "ingest-operator.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "ingest-operator.name" . }}
+    spec:
+      containers:
+        - name: {{ template "ingest-operator.name" . }}
+          image: '{{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}'
+          env:
+            - name: GRPC_PORT
+              value: {{ .Values.grpc.port | squote }}
+            - name: GRPC_HOST
+              value: {{ .Values.grpc.host }}
+          ports:
+           - containerPort: {{ .Values.deployment.grpc.port }}
+             protocol: TCP
+             name: grpc

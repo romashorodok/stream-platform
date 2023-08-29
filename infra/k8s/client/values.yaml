@@ -1,0 +1,19 @@
+
+image:
+  registry: k3d-stream-platform-registry:5000
+  name: client
+  tag: latest
+
+service:
+  type: LoadBalancer
+
+deployment:
+  http:
+    port: 3000
+
+identity:
+  service: http://localhost:8083
+
+stream:
+  service: http://localhost:8082
+

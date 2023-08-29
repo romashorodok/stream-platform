@@ -15,11 +15,46 @@ import (
 	identitypb "github.com/romashorodok/stream-platform/gen/golang/identity/v1alpha"
 	ingestioncontrollerpb "github.com/romashorodok/stream-platform/gen/golang/ingestion_controller_operator/v1alpha"
 	"github.com/romashorodok/stream-platform/pkg/auth"
+	"github.com/romashorodok/stream-platform/pkg/envutils"
 	"github.com/romashorodok/stream-platform/services/stream/internal/handler/stream"
 	"github.com/romashorodok/stream-platform/services/stream/internal/storage/postgress/repository"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+)
+
+const (
+	HTTP_HOST_DEFAULT = "0.0.0.0"
+	HTTP_PORT_DEFAULT = "8082"
+
+	DATABASE_HOST_DEFAULT     = "0.0.0.0"
+	DATABASE_PORT_DEFAULT     = "5432"
+	DATABASE_USERNAME_DEFAULT = "user"
+	DATABASE_PASSWORD_DEFAULT = "password"
+	DATABASE_NAME_DEFAULT     = "postgres"
+
+	INGEST_OPERATOR_HOST_DEFAULT = "0.0.0.0"
+	INGEST_OPERATOR_PORT_DEFAULT = "9191"
+
+	IDENTITY_PUBLIC_KEY_HOST_DEFAULT = "0.0.0.0"
+	IDENTITY_PUBLIC_KEY_PORT_DEFAULT = "9093"
+)
+
+const (
+	HTTP_HOST_VAR = "HTTP_HOST"
+	HTTP_PORT_VAR = "HTTP_PORT"
+
+	DATABASE_HOST_VAR     = "DATABASE_HOST"
+	DATABASE_PORT_VAR     = "DATABASE_PORT"
+	DATABASE_USERNAME_VAR = "DATABASE_USERNAME"
+	DATABASE_PASSWORD_VAR = "DATABASE_PASSWORD"
+	DATABASE_NAME_VAR     = "DATABASE_NAME"
+
+	INGEST_OPERATOR_HOST_VAR = "INGEST_OPERATOR_HOST"
+	INGEST_OPERATOR_PORT_VAR = "INGEST_OPERATOR_PORT"
+
+	IDENTITY_PUBLIC_KEY_HOST_VAR = "IDENTITY_PUBLIC_KEY_HOST"
+	IDENTITY_PUBLIC_KEY_PORT_VAR = "IDENTITY_PUBLIC_KEY_PORT"
 )
 
 type HTTPServerParams struct {
@@ -76,29 +111,35 @@ func (dconf *DatabaseConfig) GetURI() string {
 func NewDatabaseConfig() *DatabaseConfig {
 	return &DatabaseConfig{
 		Driver:   "postgres",
-		Username: "user",
-		Password: "password",
-		Host:     "0.0.0.0",
-		Port:     "5432",
-		Database: "postgres",
+		Username: envutils.Env(DATABASE_USERNAME_VAR, DATABASE_USERNAME_DEFAULT),
+		Password: envutils.Env(DATABASE_PASSWORD_VAR, DATABASE_PASSWORD_DEFAULT),
+		Host:     envutils.Env(DATABASE_HOST_VAR, DATABASE_HOST_DEFAULT),
+		Port:     envutils.Env(DATABASE_PORT_VAR, DATABASE_PORT_DEFAULT),
+		Database: envutils.Env(DATABASE_NAME_VAR, DATABASE_NAME_DEFAULT),
 	}
 }
 
 type HTTPConfig struct {
 	Port string
 	Host string
-
-	IngestOperatorHost string
-	IngestOperatorPort string
 }
 
 func NewHTTPConfig() *HTTPConfig {
 	return &HTTPConfig{
-		Port: "8082",
-		Host: "0.0.0.0",
+		Port: envutils.Env(HTTP_PORT_VAR, HTTP_PORT_DEFAULT),
+		Host: envutils.Env(HTTP_HOST_VAR, HTTP_HOST_DEFAULT),
+	}
+}
 
-		IngestOperatorHost: "0.0.0.0",
-		IngestOperatorPort: "9191",
+type IngestOperatorConfig struct {
+	Port string
+	Host string
+}
+
+func NewIngestOperatorConfig() *IngestOperatorConfig {
+	return &IngestOperatorConfig{
+		Port: envutils.Env(INGEST_OPERATOR_PORT_VAR, INGEST_OPERATOR_PORT_DEFAULT),
+		Host: envutils.Env(INGEST_OPERATOR_HOST_VAR, INGEST_OPERATOR_HOST_DEFAULT),
 	}
 }
 
@@ -120,15 +161,15 @@ func WithOpenAPI3FilterOptions() openapi3filter.Options {
 type IngestOperatorClientParams struct {
 	fx.In
 
-	Config *HTTPConfig
+	Config *IngestOperatorConfig
 }
 
 func WithIngestOperatorClient(params IngestOperatorClientParams) ingestioncontrollerpb.IngestControllerServiceClient {
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	conn, err := grpc.Dial(
 		net.JoinHostPort(
-			params.Config.IngestOperatorHost,
-			params.Config.IngestOperatorPort,
+			params.Config.Host,
+			params.Config.Port,
 		), opts...)
 
 	if err != nil {
@@ -145,8 +186,8 @@ type PublicKeyClientConfig struct {
 
 func NewPublicKeyClientConfig() *PublicKeyClientConfig {
 	return &PublicKeyClientConfig{
-		Host: "localhost",
-		Port: "9093",
+		Port: envutils.Env(IDENTITY_PUBLIC_KEY_PORT_VAR, IDENTITY_PUBLIC_KEY_PORT_DEFAULT),
+		Host: envutils.Env(IDENTITY_PUBLIC_KEY_HOST_VAR, IDENTITY_PUBLIC_KEY_HOST_DEFAULT),
 	}
 }
 
@@ -234,6 +275,7 @@ func main() {
 
 			NewHTTPConfig,
 			NewDatabaseConfig,
+			NewIngestOperatorConfig,
 			NewPublicKeyClientConfig,
 
 			NewHTTPServer,

@@ -2,36 +2,36 @@ version: "3.9"
 
 services:
 
-  # ingest:
-  #   image: ${REGISTRY}/services/ingest:latest
-  #   build:
-  #     target: ingest-builder
-  #     # target: ingest
+  ingest:
+    image: ${REGISTRY}/services/ingest:latest
+    build:
+      target: ingest-builder
+
   #
   # webrtc-client:
   #   image: ${REGISTRY}/services/ingest/webrtc-client:latest
   #   build:
   #     target: webrtc-client
 
-  # stream:
-  #   image: ${REGISTRY}/services/stream:latest
-  #   build:
-  #     target: stream
+  stream:
+    image: ${REGISTRY}/services/stream:latest
+    build:
+      target: stream-builder
 
   identity:
     image: ${REGISTRY}/services/identity:latest
     build:
-      target: identity
+      target: identity-builder
 
-  # client:
-  #   image: ${REGISTRY}/client:latest
-  #   build:
-  #     target: client
+  client:
+    image: ${REGISTRY}/client:latest
+    build:
+      target: client
 
-  # ingestion-operator:
-  #   image: ${REGISTRY}/operators/ingestion-operator:latest
-  #   build:
-  #     target: ingestion-operator
+  ingestion-operator:
+    image: ${REGISTRY}/operators/ingestion-operator:latest
+    build:
+      target: ingestion-operator
 
   migrate:
     image: ${REGISTRY}/cmd/migrate:latest

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "ingest-operator.fullname" . }}
+  labels:
+    app: {{ template "ingest-operator.name" . }}
+    chart: {{ template "ingest-operator.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.deployment.grpc.port }}
+      protocol: TCP
+      name: grpc
+  selector:
+    app: {{ template "ingest-operator.name" . }}

@@ -69,7 +69,7 @@ func (s *StreamingService) StreamingServiceStreamStart(w http.ResponseWriter, r 
 	response, err := s.ingestController.StartServer(
 		r.Context(),
 		&ingestioncontrollerpb.StartServerRequest{
-			IngestTemplate: "alpine-template",
+			IngestTemplate: "golang-ingest-template",
 			Deployment:     token.Sub,
 			Namespace:      "default",
 		},

@@ -1,36 +1,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "identity.fullname" . }}
+  name: {{ template "stream.fullname" . }}
   labels:
-    app: {{ template "identity.name" . }}
-    chart: {{ template "identity.chart" . }}
+    app: {{ template "stream.name" . }}
+    chart: {{ template "stream.chart" . }}
     release: {{ .Release.Name }}
 spec:
   selector:
     matchLabels:
-      app: {{ template "identity.name" . }}
+      app: {{ template "stream.name" . }}
   template:
     metadata:
       labels:
-        app: {{ template "identity.name" . }}
+        app: {{ template "stream.name" . }}
     spec:
       containers:
-        - name: {{ template "identity.name" . }}
+        - name: {{ template "stream.name" . }}
           image: '{{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}'
           env:
             - name: HTTP_HOST
               value: {{ .Values.http.host }}
-            - name: HTTP_PORT
+            - name: HTTP-PORT
               value: {{ .Values.deployment.http.port | squote }}
-            - name: GRPC_HOST
-              value: {{ .Values.grpc.host }}
-            - name: GRPC_PORT
-              value: {{ .Values.deployment.grpc.port | squote }}
             - name: DATABASE_HOST
               valueFrom:
                 secretKeyRef:
-                  name: '{{ template "identity.fullname" . }}-secret'
+                  name: '{{ template "stream.fullname" . }}-secret'
                   key: postgresHost
             - name: DATABASE_PORT
               value: {{ .Values.database.port | squote }}
@@ -40,35 +36,40 @@ spec:
               value: {{ .Values.database.password }}
             - name: DATABASE_NAME
               value: {{ .Values.database.name }}
+            - name: IDENTITY_PUBLIC_KEY_HOST
+              value: {{ .Values.identity.publicKeyService.host }}
+            - name: IDENTITY_PUBLIC_KEY_PORT
+              value: {{ .Values.identity.publicKeyService.port | squote }}
+            - name: INGEST_OPERATOR_HOST
+              value: {{ .Values.ingestOperator.host }}
+            - name: INGEST_OPERATOR_PORT
+              value: {{ .Values.ingestOperator.port | squote }}
           ports:
            - containerPort: {{ .Values.deployment.http.port }}
              protocol: TCP
              name: http
-           - containerPort: {{ .Values.deployment.grpc.port }}
-             protocol: TCP
-             name: grpc
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: '{{ template "identity.fullname" . }}-postgres'
+  name: '{{ template "stream.fullname" . }}-postgres'
   labels:
-    app: '{{ template "identity.name" . }}-postgres'
-    chart: {{ template "identity.chart" . }}
+    app: '{{ template "stream.name" . }}-postgres'
+    chart: {{ template "stream.chart" . }}
     release: {{ .Release.Name }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: '{{ template "identity.name" . }}-postgres'
-  serviceName: '{{ template "identity.name" . }}-postgres'
+      app: '{{ template "stream.name" . }}-postgres'
+  serviceName: '{{ template "stream.name" . }}-postgres'
   template:
     metadata:
       labels:
-        app: '{{ template "identity.name" . }}-postgres'
+        app: '{{ template "stream.name" . }}-postgres'
     spec:
       containers:
-        - name: '{{ template "identity.name" . }}-postgres'
+        - name: '{{ template "stream.name" . }}-postgres'
           image: {{ .Values.database.image }}
           env:
             - name: POSTGRES_DB
@@ -89,15 +90,15 @@ spec:
       volumes:
         - name: postgres-data
           persistentVolumeClaim:
-            claimName: 'identity-postgres-data-pvc'
+            claimName: 'stream-postgres-data-pvc'
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: '{{ template "identity.fullname" . }}-migrate-job'
+  name: '{{ template "stream.fullname" . }}-migrate-job'
   labels:
-    app: {{ template "identity.name" . }}
-    chart: {{ template "identity.chart" . }}
+    app: {{ template "stream.name" . }}
+    chart: {{ template "stream.chart" . }}
     release: {{ .Release.Name }}
 spec:
   completions: 10
@@ -107,5 +108,5 @@ spec:
       containers:
         - name: migrate
           image: '{{ .Values.job.migrate.image.registry }}/{{ .Values.job.migrate.image.name }}:{{ .Values.job.migrate.image.tag }}'
-          command: [ './migrate', '-db=postgres://{{ .Values.database.username }}:{{ .Values.database.password }}@{{ template "identity.fullname" . }}-postgres.default.svc.cluster.local:{{ .Values.database.port }}/{{ .Values.database.name }}?sslmode=disable', '-migrations=file://identity']
+          command: [ './migrate', '-db=postgres://{{ .Values.database.username }}:{{ .Values.database.password }}@{{ template "stream.fullname" . }}-postgres.default.svc.cluster.local:{{ .Values.database.port }}/{{ .Values.database.name }}?sslmode=disable', '-migrations=file://stream']
       restartPolicy: Never
