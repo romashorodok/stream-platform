@@ -40,7 +40,7 @@ COPY --from=ingest-builder /app/services/ingest/ingest /usr/bin/
 EXPOSE 8089/tcp
 EXPOSE 8443/udp
 
-CMD ["ingest"]
+CMD ["/usb/bin/ingest"]
 
 FROM golang:1.20.6-alpine3.18 as webrtc-client
 
@@ -171,6 +171,7 @@ COPY operators/ingestion-operator/cmd/main.go cmd/main.go
 COPY operators/ingestion-operator/api/ api/
 COPY operators/ingestion-operator/internal/ internal/
 COPY operators/ingestion-operator/grpcserver/ grpcserver/
+COPY operators/ingestion-operator/resource/ resource/
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager ./cmd/main.go
 

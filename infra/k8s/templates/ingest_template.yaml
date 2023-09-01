@@ -9,4 +9,10 @@ metadata:
   name: golang-ingest-template
 spec:
   image: k3d-stream-platform-registry:5000/services/ingest:latest
-
+  ports:
+    - containerPort: 8089
+      protocol: TCP
+      name: ingest-http
+    - containerPort: 34788
+      protocol: UDP
+      name: webrtc

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -98,13 +99,13 @@ func Configure() {
 	mediaSettings := webrtc.SettingEngine{}
 
 	mux, err := ice.NewMultiUDPMuxFromPort(PORT)
-	
+
 	if err != nil {
 		panic(err)
 	}
-	
+
 	log.Printf("Listening for WebRTC traffic at %d\n", PORT)
-	
+
 	mediaSettings.SetICEUDPMux(mux)
 
 	if err := populateMediaEngine(mediaEngine); err != nil {
@@ -133,6 +134,9 @@ func main() {
 	)
 
 	router.HandleFunc("/api/consumer/whip", whip.Handler)
+	router.HandleFunc("/hello-world", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintf(w, "hello world!")
+	})
 
 	server := &http.Server{
 		Handler: router,

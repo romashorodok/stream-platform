@@ -101,6 +101,13 @@ func (s *StreamingService) StreamingServiceStreamStart(w http.ResponseWriter, r 
 						e.Message(),
 					),
 				})
+
+			default:
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusInternalServerError)
+
+				json.NewEncoder(w).Encode(ErrorResponse{Message: fmt.Sprintf("Something went wrong on ingest operator. Error: %s", e.Message())})
+
 			}
 
 			return
@@ -195,20 +202,10 @@ func (s *StreamingService) StreamingServiceStreamStop(w http.ResponseWriter, r *
 				err.Error(),
 			),
 		})
-		return
 	}
 
-	if err = s.activeStreamRepo.DeleteActiveStreamByBroadcasterId(stream.BroadcasterID); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Message: fmt.Sprintf(
-				"Cannot delete active stream record. Error: %s",
-				err.Error(),
-			),
-		})
-		return
+	if err := s.activeStreamRepo.DeleteActiveStreamByBroadcasterId(stream.BroadcasterID); err != nil {
+		log.Println("unable to delete old stream")
 	}
 }
 

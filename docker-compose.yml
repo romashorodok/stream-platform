@@ -17,22 +17,22 @@ services:
     image: ${REGISTRY}/services/stream:latest
     build:
       target: stream-builder
-
+  #
   identity:
     image: ${REGISTRY}/services/identity:latest
     build:
       target: identity-builder
-
+  #
   client:
     image: ${REGISTRY}/client:latest
     build:
       target: client
-
+  #
   ingestion-operator:
     image: ${REGISTRY}/operators/ingestion-operator:latest
     build:
       target: ingestion-operator
-
+  #
   migrate:
     image: ${REGISTRY}/cmd/migrate:latest
     build:

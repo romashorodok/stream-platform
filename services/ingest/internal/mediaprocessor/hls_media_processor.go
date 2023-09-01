@@ -29,7 +29,8 @@ func (processor *HLSMediaProcessor) Transcode(videoSourcePipe *io.PipeReader, au
 		processor.SourceDirectory,
 		uuid.NewString(),
 	)
-	processor.SegmentPrefixURL = "http://localhost:8089/api/live/hls/"
+	// processor.SegmentPrefixURL = "http://localhost:8089/api/live/hls/"
+	processor.SegmentPrefixURL = "hls/"
 
 	log.Println("[HLS Proceessor] Setup output directory to", processor.SourceDirectory)
 

@@ -1,8 +1,13 @@
 package config
 
-import "os"
+import (
+	"log"
+	"os"
+	"strconv"
+)
 
 type Turn struct {
+	Enable   bool
 	URL      string
 	User     string
 	Password string
@@ -19,9 +24,19 @@ func env(key, defaultVariable string) string {
 	return defaultVariable
 }
 
+func parseBool(value string) bool {
+	boolValue, err := strconv.ParseBool(value)
+	if err != nil {
+		log.Panic(err)
+	}
+	return boolValue
+
+}
+
 func NewConfig() *Config {
 	return &Config{
 		Turn: Turn{
+			Enable:   parseBool(env("TURN_ENABLE", "false")),
 			URL:      env("TURN_URL", ""),
 			User:     env("TURN_USER", ""),
 			Password: env("TURN_PASSWORD", ""),

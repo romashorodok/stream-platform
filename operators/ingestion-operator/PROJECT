@@ -5,6 +5,7 @@
 domain: romashorodok.github.io
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: ingestion-operator
 repo: github.com/romashorodok/stream-platform/operators/ingestion-operator
 resources:
@@ -14,6 +15,24 @@ resources:
   controller: true
   domain: romashorodok.github.io
   kind: IngestTemplate
-  path: github.com/romashorodok/stream-platform/operators/ingestion-operator/api/v1alpha1
+  path: github.com/romashorodok/stream-platform/operators/ingestion-operator/api/romashorodok.github.io/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: romashorodok.github.io
+  group: networking.istio.io
+  kind: Gateway
+  path: github.com/romashorodok/stream-platform/operators/ingestion-operator/api/networking.istio.io/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: romashorodok.github.io
+  group: networking.istio.io
+  kind: VirtualService
+  path: github.com/romashorodok/stream-platform/operators/ingestion-operator/api/networking.istio.io/v1alpha3
+  version: v1alpha3
 version: "3"

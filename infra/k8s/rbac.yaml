@@ -6,10 +6,15 @@ metadata:
 rules:
 - apiGroups:
   - romashorodok.github.io
+  - networking.istio.io
   - apps
+  - ""
   resources:
   - ingesttemplates
   - deployments
+  - gateways
+  - virtualservices
+  - services
   verbs:
   - create
   - delete

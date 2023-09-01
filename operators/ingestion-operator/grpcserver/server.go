@@ -10,12 +10,13 @@ import (
 	ingestioncontrollerpb "github.com/romashorodok/stream-platform/gen/golang/ingestion_controller_operator/v1alpha"
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver/container"
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver/ingest"
-	"go.uber.org/zap"
+	"go.uber.org/fx"
+	uberzap "go.uber.org/zap"
 	"google.golang.org/grpc"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func UnaryInterceptorLogrFromZap() grpc.UnaryServerInterceptor {
+func unaryInterceptorLogrFromZap() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		zapLogger := ctxzap.Extract(ctx)
 		logrLogger := zapr.NewLogger(zapLogger)
@@ -26,18 +27,32 @@ func UnaryInterceptorLogrFromZap() grpc.UnaryServerInterceptor {
 	}
 }
 
-func NewServer(client client.Client /* k8s client */, log *zap.Logger) *grpc.Server {
-	server := grpc.NewServer(
-		grpc.UnaryInterceptor(
-			grpc_middleware.ChainUnaryServer(
-				grpc_zap.UnaryServerInterceptor(log),
-				UnaryInterceptorLogrFromZap(),
-			),
+type LoggerInterceptorParams struct {
+	fx.In
+
+	Logger *uberzap.Logger
+}
+
+func NewLoggerInterceptor(params LoggerInterceptorParams) grpc.ServerOption {
+	return grpc.ChainUnaryInterceptor(
+		grpc_middleware.ChainUnaryServer(
+			grpc_zap.UnaryServerInterceptor(params.Logger),
+			unaryInterceptorLogrFromZap(),
 		),
 	)
+}
 
-	ingestionControllerService := ingest.NewIngestControllerService(client)
-	ingestioncontrollerpb.RegisterIngestControllerServiceServer(server, ingestionControllerService)
+type IngestionControllerServiceParams struct {
+	fx.In
 
-	return server
+	K8s                     client.Client
+	Server                  *grpc.Server
+	IngestControllerService *ingest.IngestControllerService
+}
+
+func RegisterIngestionControllerService(params IngestionControllerServiceParams) {
+	ingestioncontrollerpb.RegisterIngestControllerServiceServer(
+		params.Server,
+		params.IngestControllerService,
+	)
 }

@@ -46,7 +46,7 @@ func NewHandler(
 	o.Name = "whip"
 
 	return &handler{
-		config: config,
+		config:       config,
 		orchestrator: o,
 		webrtcAPI:    webrtcAPI,
 		control: &WhipControl{
@@ -66,15 +66,18 @@ func (h *handler) Handler(res http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	peerConnection, err := h.webrtcAPI.NewPeerConnection(webrtc.Configuration{
-		ICEServers: []webrtc.ICEServer{
+	connconf := webrtc.Configuration{}
+	if h.config.Turn.Enable {
+		connconf.ICEServers = []webrtc.ICEServer{
 			{
 				URLs:       []string{h.config.Turn.URL},
 				Username:   h.config.Turn.User,
 				Credential: h.config.Turn.Password,
 			},
-		},
-	})
+		}
+	}
+
+	peerConnection, err := h.webrtcAPI.NewPeerConnection(connconf)
 
 	peerConnection.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
 		if state == webrtc.ICEConnectionStateDisconnected {

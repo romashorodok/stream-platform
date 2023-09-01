@@ -6,6 +6,58 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - networking.istio.io.romashorodok.github.io
+  resources:
+  - gateways
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.istio.io.romashorodok.github.io
+  resources:
+  - gateways/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - networking.istio.io.romashorodok.github.io
+  resources:
+  - gateways/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.istio.io.romashorodok.github.io
+  resources:
+  - virtualservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.istio.io.romashorodok.github.io
+  resources:
+  - virtualservices/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - networking.istio.io.romashorodok.github.io
+  resources:
+  - virtualservices/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - romashorodok.github.io
   resources:
   - ingesttemplates

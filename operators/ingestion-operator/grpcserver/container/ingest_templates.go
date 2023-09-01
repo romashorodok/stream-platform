@@ -3,7 +3,7 @@ package container
 import (
 	"errors"
 
-	"github.com/romashorodok/stream-platform/operators/ingestion-operator/api/v1alpha1"
+	v1alpha1 "github.com/romashorodok/stream-platform/operators/ingestion-operator/api/romashorodok.github.io"
 )
 
 type IngestTemplates struct {
