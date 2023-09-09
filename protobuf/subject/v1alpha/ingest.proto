@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package subject.v1alpha;
+
+option go_package = "github.com/romashorodok/stream-platform/gen/golang/subject/v1alpha;subjectpb";
+
+message BroadcasterMeta {
+  string broadcaster_id = 1;
+  string username = 2;
+}
+
+message IngestDeployed {
+  bool deployed = 1;
+  BroadcasterMeta meta = 2;
+}
+
+message IngestDestroyed {
+  bool destroyed = 1; 
+  BroadcasterMeta meta = 2;
+}
+
+message IngestRunning {
+  bool running = 1;
+  BroadcasterMeta meta = 2;
+}
+
+message IngestStoped {
+  bool stopped = 1;
+  BroadcasterMeta meta = 2;
+}

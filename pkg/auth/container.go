@@ -33,3 +33,13 @@ func WithTokenPayload(ctx context.Context) (*TokenPayload, error) {
 
 	return &payload, nil
 }
+
+func WithRawTokenPayload(tokenPayload []byte) (*TokenPayload, error) {
+	var payload TokenPayload
+
+	if err := json.Unmarshal(tokenPayload, &payload); err != nil {
+		return nil, errors.New("unable deserialize token payload.")
+	}
+
+	return &payload, nil
+}

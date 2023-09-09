@@ -2,9 +2,11 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/google/uuid"
+	"github.com/romashorodok/stream-platform/services/stream/internal/storage/schema/postgres/public/model"
 	models "github.com/romashorodok/stream-platform/services/stream/internal/storage/schema/postgres/public/model"
 	. "github.com/romashorodok/stream-platform/services/stream/internal/storage/schema/postgres/public/table"
 	"go.uber.org/fx"
@@ -68,11 +70,29 @@ func (r *ActiveStreamRepository) DeleteActiveStreamByBroadcasterId(broadcasterID
 	return err
 }
 
+func (r *ActiveStreamRepository) UpdateDeployedStatusByBroadcasterId(broadcasterID uuid.UUID, deployed bool) error {
+	model := model.ActiveStreams{Deployed: deployed}
+
+	result, err := ActiveStreams.UPDATE(ActiveStreams.Deployed).
+		MODEL(model).
+		WHERE(ActiveStreams.BroadcasterID.EQ(UUID(broadcasterID))).
+		Exec(r.db)
+
+	affected, err := result.RowsAffected()
+	if affected == 0 || err != nil {
+		return errors.New("not changed record or not found it.")
+	}
+
+	return err
+}
+
 type GetActiveStreamByBroadcasterIdResponse struct {
 	ID            uuid.UUID
 	BroadcasterID uuid.UUID
 	Namespace     string
 	Deployment    string
+	Running       bool
+	Deployed      bool
 }
 
 func (r *ActiveStreamRepository) GetActiveStreamByBroadcasterId(broadcasterID uuid.UUID) (*GetActiveStreamByBroadcasterIdResponse, error) {
@@ -90,6 +110,8 @@ func (r *ActiveStreamRepository) GetActiveStreamByBroadcasterId(broadcasterID uu
 		BroadcasterID: model.BroadcasterID,
 		Namespace:     model.Namespace,
 		Deployment:    model.Deployment,
+		Running:       model.Running,
+		Deployed:      model.Deployed,
 	}, nil
 }
 

@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"sync"
@@ -29,10 +30,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/romashorodok/stream-platform/pkg/envutils"
+	"github.com/romashorodok/stream-platform/pkg/subject"
+	"github.com/romashorodok/stream-platform/pkg/variables"
 
 	v1alpha1 "github.com/romashorodok/stream-platform/operators/ingestion-operator/api/romashorodok.github.io"
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver"
@@ -226,6 +230,56 @@ func NewLogrLogger(params LogrLoggerParams) logr.Logger {
 	return zapr.NewLogger(params.ZaprLogger)
 }
 
+type NatsConfig struct {
+	Port string
+	Host string
+}
+
+func (c *NatsConfig) GetUrl() string {
+	return fmt.Sprintf("nats://%s:%s", c.Host, c.Port)
+}
+
+func NewNatsConfig() *NatsConfig {
+	return &NatsConfig{
+		Host: envutils.Env(variables.NATS_HOST, variables.NATS_HOST_DEFAULT),
+		Port: envutils.Env(variables.NATS_PORT, variables.NATS_PORT_DEFAULT),
+	}
+}
+
+type NatsConnectionParams struct {
+	fx.In
+
+	Config *NatsConfig
+}
+
+func NewNatsConnection(params NatsConnectionParams) *nats.Conn {
+	conn, err := nats.Connect(params.Config.GetUrl())
+	if err != nil {
+		log.Panicf("Unable start nats connection. Err: %s", err)
+		os.Exit(1)
+	}
+
+	return conn
+}
+
+type NatsJetstreamParams struct {
+	fx.In
+
+	Conn *nats.Conn
+}
+
+func NewNatsJetstream(params NatsJetstreamParams) nats.JetStreamContext {
+	js, err := params.Conn.JetStream()
+	if err != nil {
+		log.Panicf("Unable start nats jetstream connection. Err: %s", err)
+		os.Exit(1)
+	}
+
+	js.AddStream(subject.INGEST_DESTROYING_STREAM_CONFIG)
+
+	return js
+}
+
 func main() {
 
 	var metricsAddr string
@@ -266,10 +320,19 @@ func main() {
 			NewGRPCServer,
 			NewGRPCRunnable,
 
+			NewNatsConfig,
+			NewNatsConnection,
+			NewNatsJetstream,
+
 			istioresource.NewIstioResourceManager,
+
 			ingestresource.NewIngestResourceManager,
+			ingestresource.NewIngestSystem,
+
 			ingest.NewIngestControllerService,
 		),
+		fx.Invoke(controller.NewIngestController),
+
 		fx.Invoke(func(ZapOption *zap.Options) {
 			ZapOption.BindFlags(flag.CommandLine)
 		}),
@@ -280,19 +343,11 @@ func main() {
 		fx.Invoke(func(Lifecycle fx.Lifecycle, mgr ctrl.Manager, GrpcRunnable *GRPCRunnable) error {
 			Lifecycle.Append(fx.Hook{
 				OnStart: func(context.Context) (err error) {
-
 					if err := mgr.Add(GrpcRunnable); err != nil {
 						setupLog.Error(err, "unable add grpc server to manager")
 						os.Exit(1)
 					}
 
-					if err := (&controller.IngestTemplateReconciler{
-						Client: mgr.GetClient(),
-						Scheme: mgr.GetScheme(),
-					}).SetupWithManager(mgr); err != nil {
-						setupLog.Error(err, "unable to create controller", "controller", "IngestTemplate")
-						os.Exit(1)
-					}
 					if err = (&networkingistioiocontroller.GatewayReconciler{
 						Client: mgr.GetClient(),
 						Scheme: mgr.GetScheme(),

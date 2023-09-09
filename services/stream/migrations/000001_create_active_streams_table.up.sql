@@ -4,6 +4,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE active_streams (
     id UUID NOT NULL DEFAULT uuid_generate_v4(),
 
+    running BOOLEAN NOT NULL DEFAULT FALSE,
+    deployed BOOLEAN NOT NULL DEFAULT FALSE,
+
     broadcaster_id UUID NOT NULL UNIQUE,
     username VARCHAR(30) NOT NULL UNIQUE,
 

@@ -18,6 +18,8 @@ type activeStreamsTable struct {
 
 	// Columns
 	ID            postgres.ColumnString
+	Running       postgres.ColumnBool
+	Deployed      postgres.ColumnBool
 	BroadcasterID postgres.ColumnString
 	Username      postgres.ColumnString
 	Namespace     postgres.ColumnString
@@ -64,13 +66,15 @@ func newActiveStreamsTable(schemaName, tableName, alias string) *ActiveStreamsTa
 func newActiveStreamsTableImpl(schemaName, tableName, alias string) activeStreamsTable {
 	var (
 		IDColumn            = postgres.StringColumn("id")
+		RunningColumn       = postgres.BoolColumn("running")
+		DeployedColumn      = postgres.BoolColumn("deployed")
 		BroadcasterIDColumn = postgres.StringColumn("broadcaster_id")
 		UsernameColumn      = postgres.StringColumn("username")
 		NamespaceColumn     = postgres.StringColumn("namespace")
 		DeploymentColumn    = postgres.StringColumn("deployment")
 		StartAtColumn       = postgres.TimestampzColumn("start_at")
-		allColumns          = postgres.ColumnList{IDColumn, BroadcasterIDColumn, UsernameColumn, NamespaceColumn, DeploymentColumn, StartAtColumn}
-		mutableColumns      = postgres.ColumnList{BroadcasterIDColumn, UsernameColumn, NamespaceColumn, DeploymentColumn, StartAtColumn}
+		allColumns          = postgres.ColumnList{IDColumn, RunningColumn, DeployedColumn, BroadcasterIDColumn, UsernameColumn, NamespaceColumn, DeploymentColumn, StartAtColumn}
+		mutableColumns      = postgres.ColumnList{RunningColumn, DeployedColumn, BroadcasterIDColumn, UsernameColumn, NamespaceColumn, DeploymentColumn, StartAtColumn}
 	)
 
 	return activeStreamsTable{
@@ -78,6 +82,8 @@ func newActiveStreamsTableImpl(schemaName, tableName, alias string) activeStream
 
 		//Columns
 		ID:            IDColumn,
+		Running:       RunningColumn,
+		Deployed:      DeployedColumn,
 		BroadcasterID: BroadcasterIDColumn,
 		Username:      UsernameColumn,
 		Namespace:     NamespaceColumn,

@@ -17,8 +17,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const REFRESH_TOKEN_COOKIE_NAME = "_refresh_token"
-
 var DEFAULT_CLAIMS = []string{"user", "broadcaster"}
 
 type UserServiceImpl struct {
@@ -113,7 +111,7 @@ func (s *UserServiceImpl) userGenerateTokens(tx *sql.Tx, ctx context.Context, us
 	return &userTokensResult{
 		AccessToken: accessToken,
 		RefreshToken: http.Cookie{
-			Name:     REFRESH_TOKEN_COOKIE_NAME,
+			Name:     tokenutils.REFRESH_TOKEN_COOKIE_NAME,
 			Value:    refreshToken,
 			Expires:  *expiresAt,
 			HttpOnly: true,
@@ -167,7 +165,7 @@ func (s *UserServiceImpl) userRefreshTokens(tx *sql.Tx, ctx context.Context, kid
 	return &userTokensResult{
 		AccessToken: accessToken,
 		RefreshToken: http.Cookie{
-			Name:     REFRESH_TOKEN_COOKIE_NAME,
+			Name:     tokenutils.REFRESH_TOKEN_COOKIE_NAME,
 			Value:    refreshToke,
 			Expires:  *expiresAt,
 			HttpOnly: true,

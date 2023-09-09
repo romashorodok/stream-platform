@@ -12,6 +12,8 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
+const REFRESH_TOKEN_COOKIE_NAME = "_refresh_token"
+
 // Create RS256 private key as jws message
 func CreatePrivateKeyAsJwsMessage() (string, error) {
 	pk, err := rsa.GenerateKey(rand.Reader, 2048)

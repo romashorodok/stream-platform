@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	v1alpha1 "github.com/romashorodok/stream-platform/operators/ingestion-operator/api/romashorodok.github.io"
+	"github.com/romashorodok/stream-platform/pkg/variables"
 	"go.uber.org/fx"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +21,8 @@ type IngestResourceManager struct {
 
 const (
 	OWNED_BY            = "app.kubernetes.io/owned-by"
+	CREATED_BY          = "app.kubernetes.io/created-by"
+	BROADCASTER_ID      = "romashorodok.github.io/ingest.broadcaster-id"
 	ISTIO_SIDECAR_LABEL = "sidecar.istio.io/inject"
 	ISTIO_SIDECAR_VALUE = "true"
 )
@@ -30,12 +33,16 @@ type IngestDeploymentByTemplateParams struct {
 	Namespace string
 	Replicas  int32
 	Owner     string
+
+	BroadcasterID string
+	Username      string
 }
 
 func (mgr *IngestResourceManager) IngestDeploymentByTemplate(params IngestDeploymentByTemplateParams) *appsv1.Deployment {
 	deploymentLabels := labels.Set{
-		"app.kubernetes.io/created-by": params.Template.Name,
-		OWNED_BY:                       params.Owner,
+		OWNED_BY:       params.Owner,
+		CREATED_BY:     params.Template.Name,
+		BROADCASTER_ID: params.BroadcasterID,
 	}
 	appLabels := labels.Set{
 		"app":               params.AppName,
@@ -46,6 +53,12 @@ func (mgr *IngestResourceManager) IngestDeploymentByTemplate(params IngestDeploy
 		Name:  params.AppName,
 		Image: params.Template.Spec.Image,
 		Ports: params.Template.Spec.Ports,
+		Env: []corev1.EnvVar{
+			{Name: variables.INGEST_BROADCASTER_ID, Value: params.BroadcasterID},
+			{Name: variables.INGEST_USERNAME, Value: params.Username},
+			{Name: variables.NATS_HOST, Value: "nats-release-headless.nats-system.svc.cluster.local"},
+			{Name: variables.NATS_PORT, Value: variables.NATS_PORT_DEFAULT},
+		},
 	}
 
 	return &appsv1.Deployment{
@@ -80,9 +93,9 @@ func (mgr *IngestResourceManager) IngestHeadlessService(params IngestHeadlessSer
 			Name:      params.IngestServiceName,
 			Namespace: params.Namespace,
 			Labels: labels.Set{
-				"app":                          params.IngestServiceName,
-				"app.kubernetes.io/created-by": params.Template.Name,
-				OWNED_BY:                       params.Owner,
+				"app":      params.IngestServiceName,
+				CREATED_BY: params.Template.Name,
+				OWNED_BY:   params.Owner,
 			},
 		},
 		Spec: corev1.ServiceSpec{

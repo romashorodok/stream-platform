@@ -4,11 +4,17 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/nats-io/nats.go"
 	"github.com/pion/ice/v2"
 	"github.com/pion/webrtc/v3"
+	subjectpb "github.com/romashorodok/stream-platform/gen/golang/subject/v1alpha"
+	"github.com/romashorodok/stream-platform/pkg/envutils"
 	"github.com/romashorodok/stream-platform/pkg/shutdown"
+	"github.com/romashorodok/stream-platform/pkg/subject"
+	"github.com/romashorodok/stream-platform/pkg/variables"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/api/consumer/whip"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/config"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
@@ -118,10 +124,62 @@ func Configure() {
 	)
 }
 
+type NatsConfig struct {
+	Port string
+	Host string
+}
+
+func (c *NatsConfig) GetUrl() string {
+	return fmt.Sprintf("nats://%s:%s", c.Host, c.Port)
+}
+
+func NewNatsConfig() *NatsConfig {
+	return &NatsConfig{
+		Host: envutils.Env(variables.NATS_HOST, variables.NATS_HOST_DEFAULT),
+		Port: envutils.Env(variables.NATS_PORT, variables.NATS_PORT_DEFAULT),
+	}
+}
+
+type NatsConnectionParams struct {
+	Config *NatsConfig
+}
+
+func WithNatsConnection(params NatsConnectionParams) *nats.Conn {
+	conn, err := nats.Connect(params.Config.GetUrl())
+	if err != nil {
+		log.Panicf("Unable start nats connection. Err: %s", err)
+		os.Exit(1)
+	}
+
+	return conn
+}
+
+type IngestConfig struct {
+	BroadcasterID string
+	Username      string
+}
+
+func NewIngestConfig() *IngestConfig {
+	return &IngestConfig{
+		BroadcasterID: envutils.Env(variables.INGEST_BROADCASTER_ID, variables.INGEST_BROADCASTER_ID_DEFAULT),
+		Username:      envutils.Env(variables.INGEST_USERNAME, variables.INGEST_USERNAME_DEFAULT),
+	}
+}
+
 func main() {
+	natsconf := NewNatsConfig()
+
+	natsconn := WithNatsConnection(NatsConnectionParams{natsconf})
+
 	shutdown := shutdown.NewShutdown()
 
 	router := mux.NewRouter().StrictSlash(true)
+
+	ingestconf := NewIngestConfig()
+	go func() {
+		msg := &subject.IngestDeployed{Deployed: true, Meta: &subjectpb.BroadcasterMeta{BroadcasterId: ingestconf.BroadcasterID, Username: ingestconf.Username}}
+		_ = subject.PublishProtobuf(natsconn, subject.NewIngestDeployed(ingestconf.BroadcasterID), msg)
+	}()
 
 	Configure()
 

@@ -14,6 +14,8 @@ import (
 
 type ActiveStreams struct {
 	ID            uuid.UUID `sql:"primary_key"`
+	Running       bool
+	Deployed      bool
 	BroadcasterID uuid.UUID
 	Username      string
 	Namespace     string

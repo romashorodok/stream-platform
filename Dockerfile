@@ -6,6 +6,7 @@ WORKDIR /app
 COPY go.mod ./
 COPY go.sum ./
 COPY pkg ./pkg/
+COPY gen/ ./gen/
 
 RUN go mod download
 

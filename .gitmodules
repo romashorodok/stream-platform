@@ -1,3 +1,6 @@
 [submodule "libs/gnostic"]
 	path = libs/gnostic
 	url = https://github.com/google/gnostic.git
+[submodule "infra/nats/nats-repo"]
+	path = infra/nats/nats-repo
+	url = https://github.com/nats-io/k8s

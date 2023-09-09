@@ -30,3 +30,8 @@ module "istio" {
   deployment_name = "my-istio-release"
   repository      = "https://istio-release.storage.googleapis.com/charts"
 }
+
+module "nats" {
+  source     = "./nats"
+  repository = "./nats/nats-repo/helm/charts"
+}

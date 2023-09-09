@@ -5,16 +5,16 @@ networks:
 
 services:
 
-  nats:
-    image: nats:alpine3.18
-    command:
-     - "-js"
-    ports:
-     - "4222:4222"
-     - "8222:8222"
-     - "6222:6222"
-    networks:
-        - bridge
+  # nats:
+  #   image: nats:alpine3.18
+  #   command:
+  #    - "-js"
+  #   ports:
+  #    - "4222:4222"
+  #    - "8222:8222"
+  #    - "6222:6222"
+  #   networks:
+  #       - bridge
 
   stream-pg:
     image: postgres:15.4-alpine3.18

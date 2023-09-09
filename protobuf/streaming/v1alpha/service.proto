@@ -48,6 +48,37 @@ option (openapi.v3.document) = {
 service StreamingService {
   option (google.api.default_host) = "localhost";
 
+  //  Event ws channel for user dashboard 
+  rpc StreamChannel(StreamChannelRequest) returns (StreamChannelResponse) {
+    option(google.api.http) = {
+      get: "/stream:channel",
+    };
+
+    option(openapi.v3.operation) = {
+      responses: {
+	response_or_reference: {
+	  // May be like 400
+	  name: "default";
+	  value: {
+	    response: {
+	      description: "Error response";
+	      content: {
+		additional_properties: [{
+		    name: "application/json";
+		    value: {
+		      schema: {
+			reference: { _ref: "#/components/schemas/ErrorResponse"; };
+		      };
+		    };
+		  }];
+	      };
+	    };
+	  };
+	};
+      };
+    };
+  };
+
   rpc StreamStat(StreamStatRequest) returns (StreamStatResponse) {
     option(google.api.http) = {
       get: "/stream:stat",
@@ -173,6 +204,12 @@ message ErrorResponse {
   string message = 1 [
     (google.api.field_behavior) = REQUIRED
   ];
+}
+
+message StreamChannelRequest {
+}
+
+message StreamChannelResponse {
 }
 
 message StreamStatRequest {

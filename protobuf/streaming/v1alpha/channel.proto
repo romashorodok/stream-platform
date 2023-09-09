@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package streaming.v1alpha;
+
+option go_package = "github.com/romashorodok/stream-platform/gen/golang/streaming/v1alpha;streamingpb";
+
+message StreamStatus {
+  bool running = 1;
+  bool deployed = 2;
+}

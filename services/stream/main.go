@@ -7,20 +7,27 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	_ "github.com/lib/pq"
+	"github.com/nats-io/nats.go"
 	identitypb "github.com/romashorodok/stream-platform/gen/golang/identity/v1alpha"
 	ingestioncontrollerpb "github.com/romashorodok/stream-platform/gen/golang/ingestion_controller_operator/v1alpha"
 	"github.com/romashorodok/stream-platform/pkg/auth"
 	"github.com/romashorodok/stream-platform/pkg/envutils"
+	"github.com/romashorodok/stream-platform/pkg/subject"
+	"github.com/romashorodok/stream-platform/pkg/variables"
 	"github.com/romashorodok/stream-platform/services/stream/internal/handler/stream"
 	"github.com/romashorodok/stream-platform/services/stream/internal/storage/postgress/repository"
+	"github.com/romashorodok/stream-platform/services/stream/internal/streamsvc"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	ingestworker "github.com/romashorodok/stream-platform/services/stream/internal/workers/ingest"
 )
 
 const (
@@ -249,6 +256,66 @@ func WithAsymmetricEncryptionAuthenticator(params AsymmetricEncryptionAuthentica
 	return auth.NewAsymmetricEncryptionAuthenticator(params.Resolver)
 }
 
+type RefreshTokenAuthenticatorParams struct {
+	fx.In
+
+	Resolver auth.IdentityPublicKeyResolver
+}
+
+func WithRefreshTokenAuthenticator(params RefreshTokenAuthenticatorParams) *auth.RefreshTokenAuthenticator {
+	return auth.NewRefreshTokenAuthenticator(params.Resolver)
+}
+
+type NatsConfig struct {
+	Port string
+	Host string
+}
+
+func (c *NatsConfig) GetUrl() string {
+	return fmt.Sprintf("nats://%s:%s", c.Host, c.Port)
+}
+
+func NewNatsConfig() *NatsConfig {
+	return &NatsConfig{
+		Host: envutils.Env(variables.NATS_HOST, variables.NATS_HOST_DEFAULT),
+		Port: envutils.Env(variables.NATS_PORT, variables.NATS_PORT_DEFAULT),
+	}
+}
+
+type NatsConnectionParams struct {
+	fx.In
+
+	Config *NatsConfig
+}
+
+func WithNatsConnection(params NatsConnectionParams) *nats.Conn {
+	conn, err := nats.Connect(params.Config.GetUrl())
+	if err != nil {
+		log.Panicf("Unable start nats connection. Err: %s", err)
+		os.Exit(1)
+	}
+
+	return conn
+}
+
+type NatsJetstreamParams struct {
+	fx.In
+
+	Conn *nats.Conn
+}
+
+func NewNatsJetstream(params NatsJetstreamParams) nats.JetStreamContext {
+	js, err := params.Conn.JetStream()
+	if err != nil {
+		log.Panicf("Unable start nats jetstream connection. Err: %s", err)
+		os.Exit(1)
+	}
+
+	js.AddStream(subject.INGEST_DESTROYING_STREAM_CONFIG)
+
+	return js
+}
+
 func main() {
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"https://*", "http://*"},
@@ -270,8 +337,14 @@ func main() {
 			WithDatabaseConnection,
 			WithIdentityPublicKeyResolver,
 			WithAsymmetricEncryptionAuthenticator,
+			WithRefreshTokenAuthenticator,
+
+			NewNatsConfig,
+			WithNatsConnection,
+			NewNatsJetstream,
 
 			repository.NewActiveStreamRepository,
+			streamsvc.NewStreamStatus,
 
 			NewHTTPConfig,
 			NewDatabaseConfig,
@@ -282,5 +355,7 @@ func main() {
 		),
 		fx.Invoke(stream.NewStreaminServiceHandler),
 		fx.Invoke(func(*http.Server) {}),
+		fx.Invoke(ingestworker.StartIngestStatusWorker),
+		fx.Invoke(ingestworker.StartIngestDestroyedWorker),
 	).Run()
 }

@@ -8,4 +8,11 @@ plugins:
   - name: go-grpc
     out: gen/golang
     opt: paths=source_relative
+  - name: ts
+    out: ./client/src/gen/js
+    strategy: all
+    path: ./client/node_modules/.bin/protoc-gen-ts
+    opt:
+    - output_javascript_es2020
+    - long_type_string
 

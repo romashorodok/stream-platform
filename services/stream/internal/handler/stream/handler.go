@@ -6,13 +6,17 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
+	"github.com/nats-io/nats.go"
 	ingestioncontrollerpb "github.com/romashorodok/stream-platform/gen/golang/ingestion_controller_operator/v1alpha"
 	"github.com/romashorodok/stream-platform/pkg/auth"
+	"github.com/romashorodok/stream-platform/pkg/httputils"
 	"github.com/romashorodok/stream-platform/pkg/middleware/openapi"
 	"github.com/romashorodok/stream-platform/services/stream/internal/storage/postgress/repository"
+	"github.com/romashorodok/stream-platform/services/stream/internal/streamsvc"
 	"go.uber.org/fx"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,44 +29,24 @@ type StreamingService struct {
 
 	ingestController ingestioncontrollerpb.IngestControllerServiceClient
 	activeStreamRepo *repository.ActiveStreamRepository
+	refreshTokenAuth *auth.RefreshTokenAuthenticator
+	streamStatus     *streamsvc.StreamStatus
+	nats             *nats.Conn
 }
 
 var _ ServerInterface = (*StreamingService)(nil)
-
-// var (
-// 	username        = "testusername"
-// 	namespace       = "default"
-// 	deployment_name = username
-// 	user_id         = 1
-// )
 
 func (s *StreamingService) StreamingServiceStreamStart(w http.ResponseWriter, r *http.Request) {
 	var request StreamStartRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusPreconditionFailed)
-
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Message: fmt.Sprintf(
-				"Unable deserialize request body. Error: %s",
-				err.Error(),
-			),
-		})
+		httputils.WriteErrorResponse(w, http.StatusPreconditionFailed, "Unable deserialize request body.", err.Error())
 		return
 	}
 
 	token, err := auth.WithTokenPayload(r.Context())
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusPreconditionFailed)
-
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Message: fmt.Sprintf(
-				"Not found user token payload. Error: %s",
-				err.Error(),
-			),
-		})
+		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Not found user token payload.", err.Error())
 		return
 	}
 
@@ -72,88 +56,51 @@ func (s *StreamingService) StreamingServiceStreamStart(w http.ResponseWriter, r 
 			IngestTemplate: "golang-ingest-template",
 			Deployment:     token.Sub,
 			Namespace:      "default",
+			Meta: &ingestioncontrollerpb.BroadcasterMeta{
+				BroadcasterId: token.UserID.String(),
+				Username:      token.Sub,
+			},
 		},
 	)
-
-	// TODO: already running case
 
 	if err != nil {
 		if e, ok := status.FromError(err); ok {
 			switch e.Code() {
 			case codes.Unavailable:
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusServiceUnavailable)
-
-				json.NewEncoder(w).Encode(ErrorResponse{
-					Message: fmt.Sprintf(
-						"Ingest operator is not available. Error: %s",
-						e.Message(),
-					),
-				})
+				httputils.WriteErrorResponse(w, http.StatusServiceUnavailable, "Ingest operator is not available.", e.Message())
 
 			case codes.Aborted:
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusConflict)
-
-				json.NewEncoder(w).Encode(ErrorResponse{
-					Message: fmt.Sprintf(
-						"Ingest server already running or something went wrong on ingest operator. Error: %s",
-						e.Message(),
-					),
-				})
+				httputils.WriteErrorResponse(w, http.StatusConflict, "Ingest server already running or something went wrong on ingest operator.", e.Message())
 
 			default:
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-
-				json.NewEncoder(w).Encode(ErrorResponse{Message: fmt.Sprintf("Something went wrong on ingest operator. Error: %s", e.Message())})
+				httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Something went wrong on ingest operator", e.Message())
 
 			}
-
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Message: fmt.Sprintf(
-				"Cannot start ingest server. Error: %s",
-				err.Error(),
-			),
-		})
+		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Ingest internal error.", err.Error())
 		return
 	}
 
-	model, err := s.activeStreamRepo.InsertActiveStream(
+	_, err = s.activeStreamRepo.InsertActiveStream(
 		token.UserID,
 		token.Sub,
 		response.Namespace,
 		response.Deployment,
 	)
 
-	log.Println(err)
-	log.Println(model)
-
 	if err != nil {
-		_, _ = s.ingestController.StopServer(r.Context(), &ingestioncontrollerpb.StopServerRequest{
-			Namespace:  model.Namespace,
-			Deployment: model.Deployment,
-		})
+		log.Printf("Found error when store active stream record. Err: %s", err)
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			httputils.WriteErrorResponse(w, http.StatusAccepted, "Already running. Stream restarting... Err:", err.Error())
+			return
+		}
 
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Message: fmt.Sprintf(
-				"Unable store active stream record. Error: %s",
-				err.Error(),
-			),
-		})
+		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Unable store active stream record", err.Error())
 		return
 	}
-
-	_ = model
 }
 
 func (s *StreamingService) StreamingServiceStreamStop(w http.ResponseWriter, r *http.Request) {
@@ -161,15 +108,7 @@ func (s *StreamingService) StreamingServiceStreamStop(w http.ResponseWriter, r *
 
 	token, err := auth.WithTokenPayload(r.Context())
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusPreconditionFailed)
-
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Message: fmt.Sprintf(
-				"Not found user token payload. Error: %s",
-				err.Error(),
-			),
-		})
+		httputils.WriteErrorResponse(w, http.StatusPreconditionFailed, "Not found user token payload", err.Error())
 		return
 	}
 	log.Println(token)
@@ -177,15 +116,7 @@ func (s *StreamingService) StreamingServiceStreamStop(w http.ResponseWriter, r *
 	stream, err := s.activeStreamRepo.GetActiveStreamByBroadcasterId(token.UserID)
 
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Message: fmt.Sprintf(
-				"Not found active stream record. Error: %s",
-				err.Error(),
-			),
-		})
+		httputils.WriteErrorResponse(w, http.StatusNotFound, "Not found active stream record.", err.Error())
 		return
 	}
 
@@ -193,20 +124,12 @@ func (s *StreamingService) StreamingServiceStreamStop(w http.ResponseWriter, r *
 		Namespace:  stream.Namespace,
 		Deployment: stream.Deployment,
 	}); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Message: fmt.Sprintf(
-				"Unable to stop ingest or not found it. Error: %s",
-				err.Error(),
-			),
-		})
+		httputils.WriteErrorResponse(w, http.StatusNotFound, "Unable stop ingest or not found it.", err.Error())
 	}
 
-	if err := s.activeStreamRepo.DeleteActiveStreamByBroadcasterId(stream.BroadcasterID); err != nil {
-		log.Println("unable to delete old stream")
-	}
+	// if err := s.activeStreamRepo.DeleteActiveStreamByBroadcasterId(stream.BroadcasterID); err != nil {
+	// 	log.Println("unable to delete old stream")
+	// }
 }
 
 type StreamingServiceParams struct {
@@ -217,14 +140,19 @@ type StreamingServiceParams struct {
 	FilterOptions    openapi3filter.Options
 	IngestController ingestioncontrollerpb.IngestControllerServiceClient
 	ActiveStreamRepo *repository.ActiveStreamRepository
-
-	AuthAsymm openapi3filter.AuthenticationFunc
+	StreamStatus     *streamsvc.StreamStatus
+	RefreshTokenAuth *auth.RefreshTokenAuthenticator
+	AuthAsymm        openapi3filter.AuthenticationFunc
+	Nats             *nats.Conn
 }
 
 func NewStreaminServiceHandler(params StreamingServiceParams) *StreamingService {
 	service := &StreamingService{
 		ingestController: params.IngestController,
 		activeStreamRepo: params.ActiveStreamRepo,
+		refreshTokenAuth: params.RefreshTokenAuth,
+		streamStatus:     params.StreamStatus,
+		nats:             params.Nats,
 	}
 
 	params.Lifecycle.Append(fx.Hook{

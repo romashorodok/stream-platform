@@ -9,10 +9,17 @@ service IngestControllerService {
   rpc StopServer(StopServerRequest) returns (StopServerResponse);
 }
 
+message BroadcasterMeta {
+  string broadcaster_id = 1;
+  string username = 2;
+}
+
 message StartServerRequest {
   string ingest_template = 1;
   string deployment = 2;
   string namespace = 3;
+  string hostname = 4;
+  BroadcasterMeta meta = 5;
 }
 
 message StartServerResponse {

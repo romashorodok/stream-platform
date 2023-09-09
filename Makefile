@@ -4,11 +4,14 @@ cluster:
 		--api-port 6443 \
 		--k3s-arg "--disable=traefik@server:0" \
 		--servers 1 \
-		--agents 2 \
-		-p 8089:8089/TCP@agent:0 \
-		-p 3478:3478/UDP@agent:0 \
+		--agents 3 \
 		-p 9002:80/TCP@agent:1 \
+		-p 4222:4222/TCP@agent:2 \
 		--registry-create k3d-stream-platform-registry:50000 && kubectl apply -f ./infra/k8s/pvc && kubectl apply -f ./infra/k8s/rbac.yaml && kubectl apply -f ./infra/k8s/crds
+
+
+		# -p 8089:8089/TCP@agent:0 \
+		# -p 3478:3478/UDP@agent:0 \
 
 		# -p 8082:8082/TCP@agent:2 \
 		# -p 8083:8083/TCP@agent:3 \
