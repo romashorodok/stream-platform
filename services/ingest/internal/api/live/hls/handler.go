@@ -64,6 +64,8 @@ func (h *HandlerImpl) Manifest(res http.ResponseWriter, r *http.Request) {
 	res.Header().Set("Access-Control-Allow-Headers", "*")
 	res.Header().Set("Access-Control-Allow-Methods", "GET")
 
+	res.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+
 	if h.mediaProcessor.ManifestFile == "" {
 		log.Println("[HLS Manifest Handler] Manifest file does not exist")
 		res.WriteHeader(http.StatusNotFound)
@@ -76,7 +78,6 @@ func (h *HandlerImpl) Manifest(res http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 }
 
 type SegmentRequest struct {

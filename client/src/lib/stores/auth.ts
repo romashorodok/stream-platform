@@ -1,9 +1,19 @@
 import { env } from '$env/dynamic/public';
 import { writable } from 'svelte/store';
 
+export type IdentityTokenPayload = {
+	aud: Array<String>,
+	exp: String,
+	iss: String,
+	sub: String,
+	'user:id': String;
+	'token:use': String;
+}
+
 type Credentials = { username: string, password: string }
 
 export const accessToken = writable<String | null>(null);
+export const identity = writable<IdentityTokenPayload | null>(null);
 
 export const canAccessProtectedRoutes = writable<boolean>(false);
 
@@ -39,7 +49,7 @@ export async function logout() {
 		if (accessToken === null)
 			return
 
-		const response = await fetch(`${env.PUBLIC_IDENTITY_SERVICE}/sign-out`, {
+		await fetch(`${env.PUBLIC_IDENTITY_SERVICE}/sign-out`, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${accessToken}`

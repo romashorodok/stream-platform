@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types';
-	import { accessToken } from '$lib/stores/auth';
+	import { accessToken, identity } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
 	import { HandleDashboardWebsocket } from '$lib/websocket/registry';
 	import { streamStatus } from '$lib/stores/dashboard';
+	// @ts-ignore
+	import shaka from 'shaka-player/dist/shaka-player.compiled.debug';
 
 	export let data: PageData;
 
@@ -14,6 +16,15 @@
 		ingestTemplate: 'alpine-template'
 	};
 	let ws: WebSocket;
+
+	onMount(async () => {
+		await shaka.polyfill.installAll();
+
+		let player: shaka.Player = new shaka.Player(video);
+		const manifest = `http://${$identity?.sub}.localhost:9002/api/live/hls`;
+
+		player.load(manifest).catch((err) => console.error(err));
+	});
 
 	onMount(() => {
 		try {
@@ -38,7 +49,7 @@
 
 	onMount(() =>
 		streamStatus.subscribe((data) => {
-			console.log(data)
+			console.log(data);
 		})
 	);
 
@@ -71,8 +82,17 @@
 	function sendWsMessage() {
 		ws.send(JSON.stringify({ tset: 'hello world' }));
 	}
+
+	let video: HTMLVideoElement;
+	let videoContainer: HTMLDivElement;
 </script>
 
 <button on:click={streamStart}>Start stream</button>
 <button on:click={streamStop}>Stop stream</button>
 <button on:click={sendWsMessage}>Send to ws</button>
+
+<div bind:this={videoContainer} data-shaka-player-container style="max-width:40em">
+	<video controls bind:this={video} data-shaka-player style="width:100%;height:100%">
+		<track kind="captions" />
+	</video>
+</div>

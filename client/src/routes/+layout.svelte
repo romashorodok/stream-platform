@@ -2,12 +2,9 @@
 	import '../app.css';
 	import { goto } from '$app/navigation';
 
-	import type { PageData } from './$types';
 	import { logout } from '$lib/stores/auth';
 	import { accessToken, canAccessProtectedRoutes } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
-
-	export let data: PageData;
 
 	onMount(() => {
 		const unsubscribe = accessToken.subscribe((token) => {

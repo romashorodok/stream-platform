@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/nats-io/nats.go"
@@ -145,7 +146,7 @@ type NatsConnectionParams struct {
 }
 
 func WithNatsConnection(params NatsConnectionParams) *nats.Conn {
-	conn, err := nats.Connect(params.Config.GetUrl())
+	conn, err := nats.Connect(params.Config.GetUrl(), nats.Timeout(time.Second*5), nats.RetryOnFailedConnect(true))
 	if err != nil {
 		log.Panicf("Unable start nats connection. Err: %s", err)
 		os.Exit(1)

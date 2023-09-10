@@ -1,12 +1,7 @@
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 
-type IdentityTokenPayload = {
-	aud: Array<String>,
-	exp: String,
-	iss: String,
-	sub: String,
-}
+import type { IdentityTokenPayload } from '$lib/stores/auth';
 
 declare global {
 	namespace App {
