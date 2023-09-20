@@ -7,7 +7,6 @@ services:
     build:
       target: ingest-builder
 
-  #
   # webrtc-client:
   #   image: ${REGISTRY}/services/ingest/webrtc-client:latest
   #   build:

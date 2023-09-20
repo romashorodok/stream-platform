@@ -11,26 +11,27 @@ version: 0.1.0
 appVersion: "1.16.0"
 
 dependencies:
-- name: client
-  version: ~0.1.0
-  repository: "file://client"
-- name: ingest-operator
-  version: ~0.1.0
-  repository: "file://operators/ingest-operator"
-- name: stream
-  version: ~0.1.0
-  repository: "file://services/stream"
-- name: identity
-  version: ~0.1.0
-  repository: "file://services/identity"
-# - name: ingest
+# - name: client
 #   version: ~0.1.0
-#   repository: "file://services/ingest"
-# - name: stunner
-#   version: ~0.15.0
-#   repository: "https://l7mp.io/stunner"
-#   condition: stunner.enabled
-# - name: stunner-gateway-operator
-#   version: ~0.15.0
-#   repository: "https://l7mp.io/stunner"
-#   condition: stunner-gateway-operator.enabled
+#   repository: "file://client"
+# - name: ingest-operator
+#   version: ~0.1.0
+#   repository: "file://operators/ingest-operator"
+# - name: stream
+#   version: ~0.1.0
+#   repository: "file://services/stream"
+# - name: identity
+#   version: ~0.1.0
+#   repository: "file://services/identity"
+
+- name: ingest
+  version: ~0.1.0
+  repository: "file://services/ingest"
+- name: stunner
+  version: ~0.15.0
+  repository: "https://l7mp.io/stunner"
+  condition: stunner.enabled
+- name: stunner-gateway-operator
+  version: ~0.15.0
+  repository: "https://l7mp.io/stunner"
+  condition: stunner-gateway-operator.enabled

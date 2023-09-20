@@ -10,6 +10,8 @@ service:
 
   # 'http://{{ template "ingest.fullname" . }}.default.svc.cluster.local:8089/api/consumer/whip'
 
+ # value: "turn:udp-gateway.default.svc.cluster.local:3478"
+
 turn:
   url:
     name: "TURN_URL"
@@ -26,7 +28,7 @@ deployment:
     port: 8089
     protocol: TCP
   webrtc:
-    port: 34788
+    port: 3478
     protocol: UDP
 
 tests:

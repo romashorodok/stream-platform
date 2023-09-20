@@ -67,20 +67,31 @@ func (h *handler) Handler(res http.ResponseWriter, r *http.Request) {
 	}
 
 	connconf := webrtc.Configuration{}
-	if h.config.Turn.Enable {
-		connconf.ICEServers = []webrtc.ICEServer{
-			{
-				URLs:       []string{h.config.Turn.URL},
-				Username:   h.config.Turn.User,
-				Credential: h.config.Turn.Password,
-			},
-		}
-	}
+	// if h.config.Turn.Enable {
+	// 	connconf.ICEServers = []webrtc.ICEServer{
+	// 		{
+	// 			URLs:       []string{h.config.Turn.URL},
+	// 			Username:   h.config.Turn.User,
+	// 			Credential: h.config.Turn.Password,
+	// 		},
+	// 	}
+	// }
 
 	peerConnection, err := h.webrtcAPI.NewPeerConnection(connconf)
 
+	// if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}); err != nil {
+	// 	httputils.WriteErrorResponse(res, http.StatusInternalServerError, "unable set resiving only mode. Err:", err.Error())
+	// 	return
+	// }
+
+	// if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}); err != nil {
+	// 	httputils.WriteErrorResponse(res, http.StatusInternalServerError, "unable set resiving only mode. Err:", err.Error())
+	// 	return
+	// }
+
 	peerConnection.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
 		if state == webrtc.ICEConnectionStateDisconnected {
+			peerConnection.Close()
 			h.orchestrator.Stop()
 		}
 	})

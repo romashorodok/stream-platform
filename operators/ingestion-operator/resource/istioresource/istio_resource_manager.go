@@ -85,7 +85,7 @@ func (mgr *IstioResourceManager) IstioVirtualService(params IstioVirtualServiceP
 		Spec: v1alpha3.VirtualServiceSpec{
 			Hosts:    []v1alpha3.Host{v1alpha3.Host(params.IngestHostName)},
 			Gateways: []string{params.IngressGatewayAppName},
-			Http:     []v1alpha3.HTTPRoute{{Route: []v1alpha3.HTTPRouteDestination{}}},
+			Http:     []v1alpha3.HTTPRoute{},
 		},
 	}
 
@@ -95,14 +95,20 @@ func (mgr *IstioResourceManager) IstioVirtualService(params IstioVirtualServiceP
 			continue
 		}
 
-		virtService.Spec.Http[0].Route = append(virtService.Spec.Http[0].Route, v1alpha3.HTTPRouteDestination{
-			Destination: v1alpha3.Destination{
-				Host: v1alpha3.Host(params.IngestServiceNameHost),
-				Port: v1alpha3.PortSelector{
-					Number: port.ContainerPort,
+		virtService.Spec.Http = append(virtService.Spec.Http,
+			v1alpha3.HTTPRoute{
+				Route: []v1alpha3.HTTPRouteDestination{
+					{
+						Destination: v1alpha3.Destination{
+							Host: v1alpha3.Host(params.IngestServiceNameHost),
+							Port: v1alpha3.PortSelector{
+								Number: port.ContainerPort,
+							},
+						},
+					},
 				},
 			},
-		})
+		)
 	}
 
 	virtService.Kind = VIRTUAL_SERVICE_KIND

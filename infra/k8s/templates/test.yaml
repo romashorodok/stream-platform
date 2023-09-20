@@ -29,6 +29,11 @@
 #         host: myuser12345
 #         port:
 #           number: 8089
+#   - route:
+#     - destination:
+#         host: myyser12345
+#         port:
+#           number: 24788
 # ---
 # apiVersion: v1
 # kind: Service

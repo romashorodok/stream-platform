@@ -13,6 +13,6 @@ spec:
     - containerPort: 8089
       protocol: TCP
       name: ingest-http
-    - containerPort: 34788
-      protocol: UDP
-      name: webrtc
+    # - containerPort: 3478
+    #   protocol: UDP
+    #   name: webrtc

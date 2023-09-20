@@ -2,11 +2,13 @@ package orchestrator
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/pkg/shutdown"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/api/live/hls"
 	hlsrouter "github.com/romashorodok/stream-platform/services/ingest/internal/api/live/hls/router"
@@ -19,7 +21,7 @@ type MediaProcessor interface {
 }
 
 type Control interface {
-	StartStream(stream *Stream) error
+	StartStream(stream *Stream, webrtcSream *WebrtcStream) error
 	GetMediaProcessors() []MediaProcessor
 }
 
@@ -48,6 +50,8 @@ type Orchestrator struct {
 	stream            *Stream
 	control           Control
 	orchestratorMutex sync.Mutex
+
+	WebrtcStream *WebrtcStream
 }
 
 func NewOrchestrator(router *mux.Router, shutdown *shutdown.Shutdown) *Orchestrator {
@@ -59,12 +63,37 @@ func NewOrchestrator(router *mux.Router, shutdown *shutdown.Shutdown) *Orchestra
 			Video: &VideoStream{PipeReader: videoReader, PipeWriter: videoWriter},
 			Audio: &AudioStream{PipeReader: audioReader, PipeWriter: audioWriter},
 		},
-		control: nil,
+		WebrtcStream: &WebrtcStream{PliChan: make(chan any, 50)},
+		control:      nil,
 	}
 	o.shutdown = shutdown
 	o.hlsRouter = hlsrouter.NewHLSRouter(router)
 
 	return o
+}
+
+type WebrtcStream struct {
+	Video *webrtc.TrackLocalStaticRTP
+	Audio *webrtc.TrackLocalStaticRTP
+
+	PliChan chan any
+}
+
+func (s *WebrtcStream) Start() error {
+	audio, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, "audio", "pion")
+	if err != nil {
+		return fmt.Errorf("unable create audio track. Err: %s", err)
+	}
+
+	video, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264}, "video", "pion")
+	if err != nil {
+		return fmt.Errorf("unable create video track. Err: %s", err)
+	}
+
+	s.Audio = audio
+	s.Video = video
+
+	return nil
 }
 
 func (o *Orchestrator) RegisterControl(impl Control) error {
@@ -111,19 +140,22 @@ func (o *Orchestrator) StartMediaProcessors() {
 }
 
 func (o *Orchestrator) Start() error {
+
+	_ = o.WebrtcStream.Start()
+
 	if o.control == nil {
 		return errors.New("not found control name.")
 	}
 
-	for _, processor := range o.control.GetMediaProcessors() {
-		o.shutdown.AddTask(processor.Destroy)
-	}
-
-	if err := o.control.StartStream(o.stream); err != nil {
+	if err := o.control.StartStream(o.stream, o.WebrtcStream); err != nil {
 		log.Println("Start stream error", err)
 	}
 
-	go o.StartMediaProcessors()
+	// for _, processor := range o.control.GetMediaProcessors() {
+	// 	o.shutdown.AddTask(processor.Destroy)
+	// }
+
+	// go o.StartMediaProcessors()
 
 	return nil
 }

@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: 'ingest-webrtc-client-test'
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: 'stream-platform-webrtc-client-test'
+          image: "k3d-stream-platform-registry:5000/services/ingest/webrtc-client:latest"
+          env:
+            - name: WHIP_ENDPOINT
+              value: "http://myuser12345.default.svc.cluster.local:8089/api/consumer/whip"

@@ -2,8 +2,10 @@ package config
 
 import (
 	"log"
-	"os"
 	"strconv"
+
+	"github.com/romashorodok/stream-platform/pkg/envutils"
+	"github.com/romashorodok/stream-platform/pkg/variables"
 )
 
 type Turn struct {
@@ -15,13 +17,6 @@ type Turn struct {
 
 type Config struct {
 	Turn Turn
-}
-
-func env(key, defaultVariable string) string {
-	if variable := os.Getenv(key); variable != "" {
-		return variable
-	}
-	return defaultVariable
 }
 
 func parseBool(value string) bool {
@@ -36,10 +31,10 @@ func parseBool(value string) bool {
 func NewConfig() *Config {
 	return &Config{
 		Turn: Turn{
-			Enable:   parseBool(env("TURN_ENABLE", "false")),
-			URL:      env("TURN_URL", ""),
-			User:     env("TURN_USER", ""),
-			Password: env("TURN_PASSWORD", ""),
+			Enable:   parseBool(envutils.Env(variables.TURN_ENABLE, variables.TURN_ENABLE_DEFAULT)),
+			URL:      envutils.Env(variables.TURN_URL, variables.TURN_URL_DEFAULT),
+			User:     envutils.Env(variables.TURN_USERNAME, variables.TURN_USERNAME_DEFAULT),
+			Password: envutils.Env(variables.TURN_PASSWORD, variables.TURN_PASSWORD_DEFAULT),
 		},
 	}
 }

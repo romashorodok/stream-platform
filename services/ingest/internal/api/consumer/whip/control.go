@@ -15,9 +15,8 @@ type WhipControl struct {
 	mediaProcessors []orchestrator.MediaProcessor
 }
 
-func (ctrl *WhipControl) StartStream(stream *orchestrator.Stream) error {
-
-	ctrl.peerConnection.OnTrack(ctrl.onTrackHandler(stream))
+func (ctrl *WhipControl) StartStream(stream *orchestrator.Stream, webrtcSream *orchestrator.WebrtcStream) error {
+	ctrl.peerConnection.OnTrack(ctrl.onTrackHandler(stream, webrtcSream))
 
 	return nil
 }
@@ -28,16 +27,33 @@ func (c *WhipControl) GetMediaProcessors() []orchestrator.MediaProcessor {
 
 type OnTrackClosure func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver)
 
-func (ctrl *WhipControl) onTrackHandler(stream *orchestrator.Stream) OnTrackClosure {
+func WriteRemoteTrackToLocal(remote *webrtc.TrackRemote, local *webrtc.TrackLocalStaticRTP) {
+	for {
+		packet, _, err := remote.ReadRTP()
+		if err != nil {
+			log.Println("unable read remote packet. Err:", err, " ", remote.Codec().MimeType)
+		}
+
+		if err = local.WriteRTP(packet); err != nil {
+			log.Println("unable write packet to local track. Err:", err, " ", remote.Codec().MimeType)
+		}
+	}
+}
+
+func (ctrl *WhipControl) onTrackHandler(stream *orchestrator.Stream, webrtcStream *orchestrator.WebrtcStream) OnTrackClosure {
 	return func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
 		log.Println("Establishing connection ", track.Codec())
+
+		log.Println(webrtcStream)
 
 		switch track.Codec().RTPCodecCapability.MimeType {
 
 		case webrtc.MimeTypeOpus, "audio/OPUS":
+			WriteRemoteTrackToLocal(track, webrtcStream.Audio)
 			opusTrackWriter(track, ctrl.peerConnection, stream.Audio.PipeWriter)
 
 		case webrtc.MimeTypeH264:
+			WriteRemoteTrackToLocal(track, webrtcStream.Video)
 			h264TrackWriter(track, ctrl.peerConnection, stream.Video.PipeWriter)
 
 		}

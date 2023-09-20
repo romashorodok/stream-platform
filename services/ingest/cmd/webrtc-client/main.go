@@ -64,6 +64,7 @@ func WHIPRequest(sdpOffer, WHIPEndpoint string) (sdpAnswer string) {
 	}
 
 	body, _ := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
 		log.Panicf("Invalid request server should create resource. Resp body: %s", body)

@@ -24,6 +24,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -43,6 +44,7 @@ import (
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver/container"
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/grpcserver/ingest"
 	controller "github.com/romashorodok/stream-platform/operators/ingestion-operator/internal/controller/romashorodok.github.io"
+	"github.com/romashorodok/stream-platform/operators/ingestion-operator/pkg/portrange"
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/resource/ingestresource"
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/resource/istioresource"
 
@@ -253,7 +255,7 @@ type NatsConnectionParams struct {
 }
 
 func NewNatsConnection(params NatsConnectionParams) *nats.Conn {
-	conn, err := nats.Connect(params.Config.GetUrl())
+	conn, err := nats.Connect(params.Config.GetUrl(), nats.Timeout(time.Second*5), nats.RetryOnFailedConnect(true))
 	if err != nil {
 		log.Panicf("Unable start nats connection. Err: %s", err)
 		os.Exit(1)
@@ -278,6 +280,51 @@ func NewNatsJetstream(params NatsJetstreamParams) nats.JetStreamContext {
 	js.AddStream(subject.INGEST_DESTROYING_STREAM_CONFIG)
 
 	return js
+}
+
+type IngestWebrtcPortRange struct {
+	MinPort uint16
+	MaxPort uint16
+}
+
+type IngestOperatorConfig struct {
+	IngestWebrtcPortRange
+}
+
+func NewIngestOperatorConfig() *IngestOperatorConfig {
+	minPort, err := envutils.ParseUint16(envutils.Env(variables.INGEST_PORT_MIN, variables.INGEST_PORT_MIN_DEFAULT))
+	if err != nil {
+		log.Panicf("Min port must be in uint16 type. Err: %s", err)
+	}
+	maxPort, err := envutils.ParseUint16(envutils.Env(variables.INGEST_PORT_MAX, variables.INGEST_PORT_MAX_DEFAULT))
+	if err != nil {
+		log.Panicf("Max port must be in uint16 type. Err: %s", err)
+	}
+
+	return &IngestOperatorConfig{
+		IngestWebrtcPortRange: IngestWebrtcPortRange{
+			MinPort: *minPort,
+			MaxPort: *maxPort,
+		},
+	}
+}
+
+type PortRangeParams struct {
+	fx.In
+
+	IngestOperatorConfig *IngestOperatorConfig
+}
+
+func NewPortRange(params PortRangeParams) *portrange.PortRange {
+	prange, err := portrange.NewPortRange(
+		portrange.Port(params.IngestOperatorConfig.MinPort),
+		portrange.Port(params.IngestOperatorConfig.MaxPort),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	return prange
 }
 
 func main() {
@@ -323,6 +370,9 @@ func main() {
 			NewNatsConfig,
 			NewNatsConnection,
 			NewNatsJetstream,
+
+			NewIngestOperatorConfig,
+			NewPortRange,
 
 			istioresource.NewIstioResourceManager,
 
@@ -395,4 +445,8 @@ func main() {
 			return nil
 		}),
 	).Run()
+}
+
+func getPublicIP() {
+	panic("unimplemented")
 }

@@ -1,15 +1,12 @@
 dependencies:
-- name: client
-  repository: file://client
+- name: ingest
+  repository: file://services/ingest
   version: 0.1.0
-- name: ingest-operator
-  repository: file://operators/ingest-operator
-  version: 0.1.0
-- name: stream
-  repository: file://services/stream
-  version: 0.1.0
-- name: identity
-  repository: file://services/identity
-  version: 0.1.0
-digest: sha256:868250d899e8ba28531904f5b3d69270e32047e90fcbb83fd7a1632474019620
-generated: "2023-08-29T11:42:22.720044+03:00"
+- name: stunner
+  repository: https://l7mp.io/stunner
+  version: 0.15.0
+- name: stunner-gateway-operator
+  repository: https://l7mp.io/stunner
+  version: 0.15.0
+digest: sha256:25af8f8da9aec729d5f3fd47881b95bbb033da90a949b70be4896fea409baa10
+generated: "2023-09-18T20:06:26.116311+03:00"

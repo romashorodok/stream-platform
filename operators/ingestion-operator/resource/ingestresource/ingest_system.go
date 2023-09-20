@@ -2,17 +2,27 @@ package ingestresource
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
+	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/nats-io/nats.go"
 	subjectpb "github.com/romashorodok/stream-platform/gen/golang/subject/v1alpha"
 	v1alpha1 "github.com/romashorodok/stream-platform/operators/ingestion-operator/api/romashorodok.github.io"
+	"github.com/romashorodok/stream-platform/operators/ingestion-operator/pkg/portrange"
 	"github.com/romashorodok/stream-platform/operators/ingestion-operator/resource/istioresource"
 	"github.com/romashorodok/stream-platform/pkg/subject"
 	"go.uber.org/fx"
 	"golang.org/x/sync/errgroup"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+var (
+	FullNodePortAssignedError = errors.New("Unable find empty node port to assign the ingest")
 )
 
 type IngestSystem struct {
@@ -22,11 +32,14 @@ type IngestSystem struct {
 	istioResourceManager  *istioresource.IstioResourceManager
 	js                    nats.JetStreamContext
 	log                   logr.Logger
+	nodePortRange         *portrange.PortRange
 }
 
 const (
-	DEFAULT_GATEWAY_PORT     = 80
-	DEFAULT_GATEWAY_APP_NAME = "gateway"
+	DEFAULT_GATEWAY_PORT         = 80
+	DEFAULT_GATEWAY_APP_NAME     = "gateway"
+	DEFAULT_WEBRTC_UDP_PORT_NAME = "webrtc-udp"
+	DEFAULT_WEBRTC_TCP_PORT_NAME = "webrtc-tcp"
 )
 
 type StartIngestSystemParams struct {
@@ -43,7 +56,15 @@ func (s *IngestSystem) StartIngestSystem(params StartIngestSystemParams) error {
 	virtualServiceAppName := fmt.Sprintf("%s-virtual-service", params.AppName)
 	ingestHostName := fmt.Sprintf("%s.%s", params.AppName, "localhost")
 	ingestServiceName := params.AppName
+	ingestWebrtcUDPGatewayServiceName := fmt.Sprintf("%s-webrtc-udp-gateway", params.AppName)
+	ingestWebrtcTCPGatewayServiceName := fmt.Sprintf("%s-webrtc-tcp-gateway", params.AppName)
 	owner := params.AppName
+
+	webrtcNodePort := s.nodePortRange.GetPort()
+	if webrtcNodePort == nil {
+		return FullNodePortAssignedError
+	}
+	webrtcPort := uint16(webrtcNodePort.Port())
 
 	// TODO: How to deal with namespace
 	// NOTE: When I delete a namespace, the namespace changes its state to 'terminating,' and I can't create it again until the termination is complete.
@@ -70,6 +91,7 @@ func (s *IngestSystem) StartIngestSystem(params StartIngestSystemParams) error {
 			Owner:         owner,
 			BroadcasterID: params.BroadcasterID,
 			Username:      params.Username,
+			WebrtcPort:    webrtcPort,
 		})
 
 		return s.k8s.Create(params.Context, ingest)
@@ -82,6 +104,37 @@ func (s *IngestSystem) StartIngestSystem(params StartIngestSystemParams) error {
 			AppName:           params.AppName,
 			Namespace:         params.Namespace,
 			Owner:             owner,
+			WebrtcPort:        webrtcPort,
+		})
+
+		return s.k8s.Create(params.Context, service)
+	})
+
+	g.Go(func() error {
+		service := s.ingestResourceManager.IngestWebrtcGatewayService(IngestIngressWebrtcServiceParams{
+			Template:           params.Template,
+			GatewayServiceName: ingestWebrtcUDPGatewayServiceName,
+			AppName:            params.AppName,
+			Namespace:          params.Namespace,
+			Owner:              owner,
+			WebrtcPort:         webrtcPort,
+			Protocol:           corev1.ProtocolUDP,
+			PortName:           DEFAULT_WEBRTC_UDP_PORT_NAME,
+		})
+
+		return s.k8s.Create(params.Context, service)
+	})
+
+	g.Go(func() error {
+		service := s.ingestResourceManager.IngestWebrtcGatewayService(IngestIngressWebrtcServiceParams{
+			Template:           params.Template,
+			GatewayServiceName: ingestWebrtcTCPGatewayServiceName,
+			AppName:            params.AppName,
+			Namespace:          params.Namespace,
+			Owner:              owner,
+			WebrtcPort:         webrtcPort,
+			Protocol:           corev1.ProtocolTCP,
+			PortName:           DEFAULT_WEBRTC_TCP_PORT_NAME,
 		})
 
 		return s.k8s.Create(params.Context, service)
@@ -117,22 +170,92 @@ func (s *IngestSystem) StartIngestSystem(params StartIngestSystemParams) error {
 	})
 
 	if err := g.Wait(); err != nil {
+		_ = s.nodePortRange.PortBack(webrtcNodePort.Port())
+
 		return fmt.Errorf("unable deploy ingest system. Error: %s", err)
 	}
 
 	return nil
 }
 
+func findDeploymentIngestWebrtcPort(ingest *appsv1.Deployment) *int32 {
+	if ingest == nil {
+		return nil
+	}
+
+	for _, container := range ingest.Spec.Template.Spec.Containers {
+		// TODO: drop sidecars
+
+		for _, port := range container.Ports {
+			if port.Name == DEFAULT_WEBRTC_TCP_PORT_NAME || port.Name == DEFAULT_WEBRTC_UDP_PORT_NAME {
+				return &port.ContainerPort
+			}
+		}
+	}
+
+	return nil
+}
+
+func findServiceIngestWebrtcPort(ingestService *corev1.Service) *int32 {
+	if ingestService == nil {
+		return nil
+	}
+
+	for _, port := range ingestService.Spec.Ports {
+		if port.Name == DEFAULT_WEBRTC_TCP_PORT_NAME || port.Name == DEFAULT_WEBRTC_UDP_PORT_NAME {
+			return &port.Port
+		}
+	}
+
+	return nil
+}
+
+func findFirstWebrtcPortInDeploymentOrService(ingest *appsv1.Deployment, service *corev1.Service) *int32 {
+	var wg sync.WaitGroup
+	wg.Add(2)
+	first := make(chan *int32, 2)
+
+	go func() {
+		defer wg.Done()
+
+		if result := findDeploymentIngestWebrtcPort(ingest); result != nil {
+			first <- result
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		if result := findServiceIngestWebrtcPort(service); result != nil {
+			first <- result
+		}
+	}()
+
+	go func() {
+		wg.Wait()
+		first <- nil
+	}()
+
+	select {
+	case result := <-first:
+		return result
+	}
+}
+
 func (s *IngestSystem) StopIngestSystem(context context.Context, appName string, namespace string) error {
 	ingressGatewayAppName := fmt.Sprintf("%s-gateway", appName)
 	virtualServiceAppName := fmt.Sprintf("%s-virtual-service", appName)
 	ingestServiceName := appName
+	ingestWebrtcUDPGatewayServiceName := fmt.Sprintf("%s-webrtc-udp-gateway", appName)
+	ingestWebrtcTCPGatewayServiceName := fmt.Sprintf("%s-webrtc-tcp-gateway", appName)
 	owner := appName
 
 	// NOTE: If delete by namespace i need wait until namespace will terminated
 
 	g := new(errgroup.Group)
 	var broadcasterID string
+	var ingestDeployment *appsv1.Deployment
+	var ingestWebrtcGatewayService *corev1.Service
 
 	g.Go(func() error {
 		ingest, err := s.ingestResourceManager.GetIngestByAppName(GetIngestByAppNameParams{
@@ -143,6 +266,7 @@ func (s *IngestSystem) StopIngestSystem(context context.Context, appName string,
 		if err != nil {
 			return fmt.Errorf("unable find ingest deployment for %s/%s. Error: %s", namespace, appName, err)
 		}
+		ingestDeployment = ingest
 
 		broadcasterID = ingest.Labels[BROADCASTER_ID]
 
@@ -154,9 +278,40 @@ func (s *IngestSystem) StopIngestSystem(context context.Context, appName string,
 			Context:           context,
 			Namespace:         namespace,
 			IngestServiceName: ingestServiceName,
+			Owner:             owner,
 		})
 		if err != nil {
 			return fmt.Errorf("unable find ingest service for %s/%s. Error: %s", namespace, ingestServiceName, err)
+		}
+
+		return s.k8s.Delete(context, service)
+	})
+
+	g.Go(func() error {
+		service, err := s.ingestResourceManager.GetIngestServiceByAppName(GetIngestServiceByAppName{
+			Context:           context,
+			Namespace:         namespace,
+			IngestServiceName: ingestWebrtcUDPGatewayServiceName,
+			Owner:             owner,
+		})
+		if err != nil {
+			return fmt.Errorf("unable find ingest webrtc service for %s/%s. Error: %s", namespace, ingestWebrtcUDPGatewayServiceName, err)
+		}
+
+		ingestWebrtcGatewayService = service
+
+		return s.k8s.Delete(context, service)
+	})
+
+	g.Go(func() error {
+		service, err := s.ingestResourceManager.GetIngestServiceByAppName(GetIngestServiceByAppName{
+			Context:           context,
+			Namespace:         namespace,
+			IngestServiceName: ingestWebrtcTCPGatewayServiceName,
+			Owner:             owner,
+		})
+		if err != nil {
+			return fmt.Errorf("unable find ingest webrtc service for %s/%s. Error: %s", namespace, ingestWebrtcTCPGatewayServiceName, err)
 		}
 
 		return s.k8s.Delete(context, service)
@@ -191,7 +346,19 @@ func (s *IngestSystem) StopIngestSystem(context context.Context, appName string,
 	})
 
 	if err := g.Wait(); err != nil {
+		if result := findFirstWebrtcPortInDeploymentOrService(ingestDeployment, ingestWebrtcGatewayService); result != nil {
+			if err := s.nodePortRange.PortBack(portrange.Port(*result)); err != nil {
+				log.Println(err)
+			}
+		}
+
 		return fmt.Errorf("unable stop ingest system. Error: %s", err)
+	}
+
+	if result := findFirstWebrtcPortInDeploymentOrService(ingestDeployment, ingestWebrtcGatewayService); result != nil {
+		if err := s.nodePortRange.PortBack(portrange.Port(*result)); err != nil {
+			return fmt.Errorf("unable webrtc port back of %d. Err: %s", result, err)
+		}
 	}
 
 	if broadcasterID == "" {
@@ -224,6 +391,7 @@ type IngestSystemParams struct {
 	IstioResourceManager  *istioresource.IstioResourceManager
 	JS                    nats.JetStreamContext
 	Log                   logr.Logger
+	NodePortRange         *portrange.PortRange
 }
 
 func NewIngestSystem(params IngestSystemParams) *IngestSystem {
@@ -232,5 +400,6 @@ func NewIngestSystem(params IngestSystemParams) *IngestSystem {
 		ingestResourceManager: params.IngestResourceManager,
 		istioResourceManager:  params.IstioResourceManager,
 		js:                    params.JS,
+		nodePortRange:         params.NodePortRange,
 	}
 }

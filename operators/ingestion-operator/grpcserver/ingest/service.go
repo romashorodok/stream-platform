@@ -49,7 +49,6 @@ func (s *IngestControllerService) StartServer(context context.Context, req *inge
 	ingestTemplates := container.WithIngestTemplates()
 
 	ingestTemplate, err := ingestTemplates.Get(req.IngestTemplate)
-
 	if err != nil {
 		log.Error(err, "Unable find ingest template")
 		return nil, status.Errorf(codes.NotFound, "not found ingest template")
@@ -66,7 +65,6 @@ func (s *IngestControllerService) StartServer(context context.Context, req *inge
 		BroadcasterID: req.Meta.BroadcasterId,
 	}); err != nil {
 		s.logger.Error(err, "unable stop ingest system")
-
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

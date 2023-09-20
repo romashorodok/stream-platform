@@ -1,60 +1,65 @@
-# ---
-# apiVersion: gateway.networking.k8s.io/v1alpha2
-# kind: GatewayClass
-# metadata:
-#   name: stunner-gatewayclass
-# spec:
-#   controllerName: "stunner.l7mp.io/gateway-operator"
-#   parametersRef:
-#     group: "stunner.l7mp.io"
-#     kind: GatewayConfig
-#     name: stunner-gatewayconfig
-#     namespace: {{ .Release.Namespace }}
-#   description: "STUNner is a WebRTC media gateway for Kubernetes"
-# ---
-# apiVersion: stunner.l7mp.io/v1alpha1
-# kind: GatewayConfig
-# metadata:
-#   name: stunner-gatewayconfig
-#   namespace: {{ .Release.Namespace }}
-# spec:
-#   realm: stunner.l7mp.io
-#   authRef:
-#     name: stunner-auth-secret
-#     namespace: {{ .Release.Namespace }}
-# ---
-# apiVersion: v1
-# kind: Secret
-# metadata:
-#   name: stunner-auth-secret
-#   namespace: {{ .Release.Namespace }}
-# type: Opaque
-# stringData:
-#   type: static
-#   username: user-1
-#   password: pass-1
-# ---
-# apiVersion: gateway.networking.k8s.io/v1alpha2
-# kind: Gateway
-# metadata:
-#   name: udp-gateway
-#   namespace: {{ .Release.Namespace }}
-# spec:
-#   gatewayClassName: stunner-gatewayclass
-#   listeners:
-#     - name: udp-listener
-#       port: 3478
-#       protocol: UDP
-# ---
-# apiVersion: gateway.networking.k8s.io/v1alpha2
-# kind: UDPRoute
-# metadata:
-#   name: '{{ template "stream-platform.fullname" . }}-ingest'
-#   namespace: {{ .Release.Namespace }}
-# spec:
-#   parentRefs:
-#     - name: udp-gateway
-#   rules:
-#     - backendRefs:
-#         - name: '{{ template "stream-platform.fullname" . }}-ingest'
-#           namespace: {{ .Release.Namespace }}
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GatewayClass
+metadata:
+  name: stunner-gatewayclass
+spec:
+  controllerName: "stunner.l7mp.io/gateway-operator"
+  parametersRef:
+    group: "stunner.l7mp.io"
+    kind: GatewayConfig
+    name: stunner-gatewayconfig
+    namespace: {{ .Release.Namespace }}
+  description: "STUNner is a WebRTC media gateway for Kubernetes"
+---
+apiVersion: stunner.l7mp.io/v1alpha1
+kind: GatewayConfig
+metadata:
+  name: stunner-gatewayconfig
+  namespace: {{ .Release.Namespace }}
+spec:
+  realm: stunner.l7mp.io
+  # https://github.com/l7mp/stunner-helm/blob/5400598fd1ae6c9ad9388880b51d5fb8a6d121c6/helm/stunner-gateway-operator/crds/stunner-crd.yaml#L138
+  minPort: 3478
+  maxPort: 3478
+  authRef:
+    name: stunner-auth-secret
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: stunner-auth-secret
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  type: static
+  username: user-1
+  password: pass-1
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: Gateway
+metadata:
+  name: udp-gateway
+  namespace: {{ .Release.Namespace }}
+spec:
+  gatewayClassName: stunner-gatewayclass
+  listeners:
+    - name: udp-listener
+      port: 3478
+      protocol: UDP
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: '{{ template "stream-platform.fullname" . }}-ingest'
+  namespace: {{ .Release.Namespace }}
+spec:
+  parentRefs:
+    - name: udp-gateway
+  rules:
+    - backendRefs:
+        - name: '{{ template "stream-platform.fullname" . }}-ingest'
+          namespace: {{ .Release.Namespace }}
+        # - name: 'myuser12345'
+        #   namespace: {{ .Release.Namespace }}
