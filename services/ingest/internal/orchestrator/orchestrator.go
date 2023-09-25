@@ -151,11 +151,11 @@ func (o *Orchestrator) Start() error {
 		log.Println("Start stream error", err)
 	}
 
-	// for _, processor := range o.control.GetMediaProcessors() {
-	// 	o.shutdown.AddTask(processor.Destroy)
-	// }
+	for _, processor := range o.control.GetMediaProcessors() {
+		o.shutdown.AddTask(processor.Destroy)
+	}
 
-	// go o.StartMediaProcessors()
+	go o.StartMediaProcessors()
 
 	return nil
 }

@@ -27,7 +27,8 @@ func env(key, defaultVariable string) string {
 
 func NewConfig() *Config {
 	return &Config{
-		WHIPEndpoint: env("WHIP_ENDPOINT", "http://127.0.0.1:8089/api/consumer/whip"),
+		// WHIPEndpoint: env("WHIP_ENDPOINT", "http://127.0.0.1:8089/api/consumer/whip"),
+		WHIPEndpoint: env("WHIP_ENDPOINT", "http://127.0.0.1:8089/api/ingress/whip"),
 	}
 }
 
@@ -120,15 +121,7 @@ func main() {
 
 	webrtcAPI := NewWebrtcAPI()
 
-	peerConnection, err := webrtcAPI.NewPeerConnection(webrtc.Configuration{
-		ICEServers: []webrtc.ICEServer{
-			{
-				URLs:       []string{"turn:localhost:3478"},
-				Username:   "user-1",
-				Credential: "pass-1",
-			},
-		},
-	})
+	peerConnection, err := webrtcAPI.NewPeerConnection(webrtc.Configuration{})
 
 	if err != nil {
 		log.Fatal("Cannot create peer connection. Err:", err)

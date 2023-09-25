@@ -2,6 +2,7 @@ package namedpipe
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -40,5 +41,9 @@ func (pipe NamedPipe) OpenAsWriteOnly() (pipeFile *os.File, err error) {
 }
 
 func (pipe NamedPipe) Close() {
-
+	log.Printf("[NamedPipe] removing %s", pipe.Path)
+	if err := os.Remove(pipe.Path); err != nil {
+		log.Println("Unable delete named pipe. Err", err)
+		return
+	}
 }

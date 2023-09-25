@@ -21,9 +21,13 @@
 		await shaka.polyfill.installAll();
 
 		let player: shaka.Player = new shaka.Player(video);
-		const manifest = `http://${$identity?.sub}.localhost:9002/api/live/hls`;
 
-		player.load(manifest).catch((err) => console.error(err));
+		const manifest = `http://localhost:8089/api/egress/hls`;
+		player.load(manifest).catch(console.error)
+
+		// const manifest = `http://${$identity?.sub}.localhost:9002/api/live/hls`;
+
+		// player.load(manifest).catch((err) => console.error(err));
 	});
 
 	onMount(() => {

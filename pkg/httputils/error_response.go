@@ -15,6 +15,6 @@ func WriteErrorResponse(w http.ResponseWriter, statusCode int, errorMessage ...s
 	w.WriteHeader(statusCode)
 
 	json.NewEncoder(w).Encode(ErrorResponse{
-		Message: strings.Join(errorMessage, " ") ,
+		Message: strings.Join(errorMessage, " "),
 	})
 }

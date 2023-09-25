@@ -77,7 +77,6 @@ func (h *HandlerImpl) Manifest(res http.ResponseWriter, r *http.Request) {
 		res.WriteHeader(http.StatusNotFound)
 		return
 	}
-
 }
 
 type SegmentRequest struct {
