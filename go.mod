@@ -13,6 +13,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/nats-io/nats.go v1.28.0
 	go.uber.org/fx v1.20.0
+	golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d
 	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0

@@ -69,6 +69,8 @@ func (s *StatefulStreamGlobal) HandleWebrtc(ctx context.Context) (WebrtcTrackHan
 	return func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
 		log.Println("Received track ", track.Codec())
 
+		// track.ReadRTP()
+
 		switch track.Codec().RTPCodecCapability.MimeType {
 		case webrtc.MimeTypeOpus, "audio/OPUS":
 			stream.PipeOpusRemoteTrack(ctx, track)

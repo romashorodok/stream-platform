@@ -12,6 +12,7 @@ import (
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/pkg/envutils"
 	"github.com/romashorodok/stream-platform/pkg/httputils"
+	"github.com/romashorodok/stream-platform/pkg/netutils"
 	"github.com/romashorodok/stream-platform/pkg/variables"
 	"go.uber.org/fx"
 )
@@ -169,6 +170,10 @@ func NewIngestWebrtcAPI(params IngestWebrtcAPIParams) *webrtc.API {
 
 	if config.NATPublicIP != "" {
 		mediaSettings.SetNAT1To1IPs([]string{config.NATPublicIP}, webrtc.ICECandidateTypeHost)
+	} else {
+		if ips, err := netutils.GetLocalIPAddresses(false, nil); err == nil && ips != nil {
+			mediaSettings.SetNAT1To1IPs(ips, webrtc.ICECandidateTypeHost)
+		}
 	}
 
 	interceptorRegistry := &interceptor.Registry{}

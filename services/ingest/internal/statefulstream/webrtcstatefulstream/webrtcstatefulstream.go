@@ -4,14 +4,10 @@ import (
 	"context"
 	"io"
 	"log"
-	"sync"
-	"time"
 
-	"github.com/at-wat/ebml-go/webm"
-	"github.com/pion/rtp/codecs"
 	"github.com/pion/webrtc/v3"
-	"github.com/pion/webrtc/v3/pkg/media/h264writer"
-	"github.com/pion/webrtc/v3/pkg/media/samplebuilder"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/media/muxer"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/media/muxer/opusmuxer"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/mediaprocessor"
 	"go.uber.org/fx"
 )
@@ -52,88 +48,44 @@ func (s *WebrtcStatefulStream) Ingest(ctx context.Context) error {
 func (s *WebrtcStatefulStream) PipeH264RemoteTrack(ctx context.Context, track *webrtc.TrackRemote) {
 	defer log.Println("[PipeH264RemoteTrack] canceled")
 
-	var rwmx sync.RWMutex
+	rtpMuxer := muxer.NewRtpMuxer()
+	h264Muxer := muxer.NewH264Muxer()
 
-	writer := h264writer.NewWith(s.videoPipeWriter)
+	go rtpMuxer.Bind(track)
+	go rtpMuxer.BindLocal(s.video)
 
-	// go wrtc.PipeRemoteTrack(ctx, track, s.video)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			rtp, _, _ := track.ReadRTP()
-
-			if rtp == nil {
-				continue
-			}
-
-			rwmx.RLock()
-			if err := writer.WriteRTP(rtp); err != nil {
-				// log.Printf("[PipeH264RemoteTrack]: h264 writer. %s", err)
-			}
-			rwmx.RUnlock()
+	go func() {
+		for {
+			_, _ = io.Copy(h264Muxer, rtpMuxer)
 		}
+	}()
+
+	go func() {
+		for {
+			_, _ = io.Copy(s.videoPipeWriter, h264Muxer)
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
 	}
 }
 
 func (s *WebrtcStatefulStream) PipeOpusRemoteTrack(ctx context.Context, track *webrtc.TrackRemote) {
 	defer log.Println("[PipeOpusRemoteTrack] canceled")
 
-	var rwmx sync.RWMutex
+	opusMuxer := opusmuxer.NewOpusMuxer()
 
-	// TODO: Start SFU
+	go opusMuxer.Bind(track)
 
-	// go wrtc.PipeRemoteTrack(ctx, track, s.audio)
-
-	opusBuilder := samplebuilder.New(10, &codecs.OpusPacket{}, 48_000)
-
-	// NOTE: Don't mux twice
-	ws, _ := webm.NewSimpleBlockWriter(s.audioPipeWriter, []webm.TrackEntry{
-		{
-			Name:            "Audio",
-			TrackNumber:     1,
-			TrackUID:        12345,
-			CodecID:         "A_OPUS",
-			TrackType:       2,
-			DefaultDuration: 20000000,
-			Audio: &webm.Audio{
-				SamplingFrequency: 48_000.0,
-				Channels:          2,
-			},
-		},
-	})
-	webmOpusBlockWriter := ws[0]
-
-	var timestamp time.Duration
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			rtp, _, _ := track.ReadRTP()
-
-			if rtp == nil {
-				continue
-			}
-
-			opusBuilder.Push(rtp)
-
-			opusSample := opusBuilder.Pop()
-			if opusSample == nil {
-				continue
-			}
-
-			rwmx.RLock()
-			timestamp += opusSample.Duration
-
-			if _, err := webmOpusBlockWriter.Write(true, int64(timestamp/time.Millisecond), opusSample.Data); err != nil {
-				// log.Printf("[PipeOpusRemoteTrack]: Webm opus block writer. %s", err)
-			}
-			rwmx.RUnlock()
+	go func() {
+		for {
+			_, _ = io.Copy(s.audioPipeWriter, opusMuxer)
 		}
+	}()
+
+	select {
+	case <-ctx.Done():
 	}
 }
 

@@ -64,8 +64,9 @@ func (processor *FFmpegHLSMediaProcessor) Transcode(ctx context.Context, videoSo
 		"-hls_list_size", "8",
 		"-hls_flags", "delete_segments+independent_segments",
 		"-hls_start_number_source", "datetime",
-		"-hls_allow_cache", "1",
+		"-hls_allow_cache", "0",
 		"-hls_base_url", processor.SegmentPrefixURL,
+		"-hls_segment_filename", "output_%03d.ts",
 		"-hls_segment_filename", fmt.Sprintf("%s/%s", processor.SourceDirectory, "%Y-%m-%d-%s.ts"),
 		processor.ManifestFile,
 	)
