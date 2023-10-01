@@ -14,7 +14,7 @@ var (
 func Answer(peer *webrtc.PeerConnection, offer string) (string, error) {
 
 	if err := peer.SetRemoteDescription(webrtc.SessionDescription{
-		SDP:  string(offer),
+		SDP:  offer,
 		Type: webrtc.SDPTypeOffer,
 	}); err != nil {
 		return "", err

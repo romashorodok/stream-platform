@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -29,7 +28,6 @@ func (h *handler) Handler(w http.ResponseWriter, r *http.Request) {
 
 	peerConnection, err := h.webrtcAPI.NewPeerConnection(connConfig)
 	if err != nil {
-		log.Println("peer conn", err)
 		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "unable create peer connection. Err:", err.Error())
 		return
 	}
@@ -38,7 +36,6 @@ func (h *handler) Handler(w http.ResponseWriter, r *http.Request) {
 		webrtc.RTPCodecTypeVideo,
 		webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
 	); err != nil {
-		log.Println("Transiver")
 		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "unable set resiving only mode for video. Err:", err.Error())
 		return
 	}
@@ -47,7 +44,6 @@ func (h *handler) Handler(w http.ResponseWriter, r *http.Request) {
 		webrtc.RTPCodecTypeAudio,
 		webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
 	); err != nil {
-		log.Println("Transiver")
 		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "unable set resiving only mode for audio. Err:", err.Error())
 		return
 	}
@@ -65,10 +61,13 @@ func (h *handler) Handler(w http.ResponseWriter, r *http.Request) {
 
 	offer, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
+	if err != nil {
+		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "unable read offer. Err:", err.Error())
+		return
+	}
 
 	answer, err := wrtc.Answer(peerConnection, string(offer))
 	if err != nil {
-		log.Println("Bad answer", err)
 		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "unable handle and generate answer. Err:", err.Error())
 		return
 	}

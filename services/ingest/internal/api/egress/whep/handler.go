@@ -8,20 +8,20 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/pkg/httputils"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/config"
-	"github.com/romashorodok/stream-platform/services/ingest/internal/orchestrator"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/statefulstream/webrtcstatefulstream"
 )
 
 type Handler struct {
-	stream    *orchestrator.WebrtcStream
+	// stream    *orchestrator.WebrtcStream
+	stream    *webrtcstatefulstream.WebrtcStatefulStream
 	webrtcAPI *webrtc.API
 	config    *config.Config
 }
 
-func NewHandler(api *webrtc.API, stream *orchestrator.WebrtcStream, config *config.Config) *Handler {
+func NewHandler(api *webrtc.API, stream *webrtcstatefulstream.WebrtcStatefulStream, config *config.Config) *Handler {
 	return &Handler{
 		webrtcAPI: api,
 		stream:    stream,
@@ -35,53 +35,53 @@ func (h *Handler) Whep(offer string) (string, string, error) {
 	log.Println("WHEP config", h.config)
 
 	connconf := webrtc.Configuration{}
-	if h.config.Turn.Enable {
-		connconf.ICEServers = []webrtc.ICEServer{
-			{
-				URLs:       []string{h.config.Turn.URL},
-				Username:   h.config.Turn.User,
-				Credential: h.config.Turn.Password,
-			},
-		}
-		connconf.ICETransportPolicy = webrtc.ICETransportPolicyRelay
-	}
+	// if h.config.Turn.Enable {
+	// 	connconf.ICEServers = []webrtc.ICEServer{
+	// 		{
+	// 			URLs:       []string{h.config.Turn.URL},
+	// 			Username:   h.config.Turn.User,
+	// 			Credential: h.config.Turn.Password,
+	// 		},
+	// 	}
+	// 	connconf.ICETransportPolicy = webrtc.ICETransportPolicyRelay
+	// }
 
 	peerConnection, err := h.webrtcAPI.NewPeerConnection(connconf)
 	if err != nil {
 		return "", "", fmt.Errorf("unable create peer connection. Err: %s", err)
 	}
 
-	if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}); err != nil {
-		return "", "", fmt.Errorf("unable set peer connection to send only. Err: %s", err)
-	}
+	// if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}); err != nil {
+	// 	return "", "", fmt.Errorf("unable set peer connection to send only. Err: %s", err)
+	// }
 
-	if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}); err != nil {
-		return "", "", fmt.Errorf("unable set peer connection to send only. Err: %s", err)
-	}
+	// if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}); err != nil {
+	// 	return "", "", fmt.Errorf("unable set peer connection to send only. Err: %s", err)
+	// }
 
 	_, _ = peerConnection.AddTrack(h.stream.Audio)
-	rtpSender, err := peerConnection.AddTrack(h.stream.Video)
+	_, err = peerConnection.AddTrack(h.stream.Video)
 	if err != nil {
 		log.Println("rtp sender error")
 	}
 
-	go func() {
-		for {
-			rtcpPackets, _, rtcpErr := rtpSender.ReadRTCP()
-			if rtcpErr != nil {
-				return
-			}
+	// go func() {
+	// 	for {
+	// 		rtcpPackets, _, rtcpErr := rtpSender.ReadRTCP()
+	// 		if rtcpErr != nil {
+	// 			return
+	// 		}
 
-			for _, r := range rtcpPackets {
-				if _, isPLI := r.(*rtcp.PictureLossIndication); isPLI {
-					select {
-					case h.stream.PliChan <- true:
-					default:
-					}
-				}
-			}
-		}
-	}()
+	// 		for _, r := range rtcpPackets {
+	// 			if _, isPLI := r.(*rtcp.PictureLossIndication); isPLI {
+	// 				select {
+	// 				case h.stream.PliChan <- true:
+	// 				default:
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }()
 
 	if err := peerConnection.SetRemoteDescription(webrtc.SessionDescription{
 		SDP:  offer,

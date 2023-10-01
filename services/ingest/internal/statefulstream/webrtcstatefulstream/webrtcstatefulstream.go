@@ -6,15 +6,17 @@ import (
 	"log"
 
 	"github.com/pion/webrtc/v3"
-	"github.com/romashorodok/stream-platform/services/ingest/internal/media/muxer"
-	"github.com/romashorodok/stream-platform/services/ingest/internal/media/muxer/opusmuxer"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/media"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/media/h264"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/media/opus"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/media/rtp"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/mediaprocessor"
 	"go.uber.org/fx"
 )
 
 type WebrtcStatefulStream struct {
-	audio           *webrtc.TrackLocalStaticRTP
-	video           *webrtc.TrackLocalStaticRTP
+	Audio           *webrtc.TrackLocalStaticRTP
+	Video           *webrtc.TrackLocalStaticRTP
 	audioPipeReader *io.PipeReader
 	audioPipeWriter *io.PipeWriter
 	videoPipeReader *io.PipeReader
@@ -48,23 +50,17 @@ func (s *WebrtcStatefulStream) Ingest(ctx context.Context) error {
 func (s *WebrtcStatefulStream) PipeH264RemoteTrack(ctx context.Context, track *webrtc.TrackRemote) {
 	defer log.Println("[PipeH264RemoteTrack] canceled")
 
-	rtpMuxer := muxer.NewRtpMuxer()
-	h264Muxer := muxer.NewH264Muxer()
+	h264 := media.NewMuxerBuilder(rtp.NewRtpToRtpMuxerWriter(),
+		h264.NewRtpToH264MediaWriter(s.videoPipeWriter),
+	)
 
-	go rtpMuxer.Bind(track)
-	go rtpMuxer.BindLocal(s.video)
+	rtp := media.NewDemuxerBuilder(rtp.NewRtpTrackDemuxerReader(track),
+		rtp.NewRtpTrackWriter(s.Video),
+		media.NewTargetMediaWriter(h264),
+	)
 
-	go func() {
-		for {
-			_, _ = io.Copy(h264Muxer, rtpMuxer)
-		}
-	}()
-
-	go func() {
-		for {
-			_, _ = io.Copy(s.videoPipeWriter, h264Muxer)
-		}
-	}()
+	go h264.Mux()
+	go rtp.Demux()
 
 	select {
 	case <-ctx.Done():
@@ -74,15 +70,17 @@ func (s *WebrtcStatefulStream) PipeH264RemoteTrack(ctx context.Context, track *w
 func (s *WebrtcStatefulStream) PipeOpusRemoteTrack(ctx context.Context, track *webrtc.TrackRemote) {
 	defer log.Println("[PipeOpusRemoteTrack] canceled")
 
-	opusMuxer := opusmuxer.NewOpusMuxer()
+	opus := media.NewMuxerBuilder(opus.NewRtpToWebmOpusWriter(),
+		media.NewTargetMediaWriter(s.audioPipeWriter),
+	)
 
-	go opusMuxer.Bind(track)
+	rtp := media.NewDemuxerBuilder(rtp.NewRtpTrackDemuxerReader(track),
+		rtp.NewRtpTrackWriter(s.Audio),
+		media.NewTargetMediaWriter(opus),
+	)
 
-	go func() {
-		for {
-			_, _ = io.Copy(s.audioPipeWriter, opusMuxer)
-		}
-	}()
+	go opus.Mux()
+	go rtp.Demux()
 
 	select {
 	case <-ctx.Done():
@@ -120,8 +118,8 @@ func NewWebrtcAllocatorFunc(params WebrtcAllocatorFuncParams) WebrtcAllocatorFun
 		videoPipeReader, videoPipeWriter := io.Pipe()
 
 		return &WebrtcStatefulStream{
-			audio:           audio,
-			video:           video,
+			Audio:           audio,
+			Video:           video,
 			audioPipeReader: audioPipeReader,
 			audioPipeWriter: audioPipeWriter,
 			videoPipeReader: videoPipeReader,
