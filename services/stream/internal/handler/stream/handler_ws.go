@@ -84,7 +84,8 @@ func (s *StreamingService) StreamingServiceStreamChannel(w http.ResponseWriter, 
 		httputils.WriteErrorResponse(w, http.StatusInternalServerError, "Unable deserialize token payload", err.Error())
 		return
 	}
-	log.Println(payload)
+
+	log.Printf("[%s] Subscriber identity: %+v", payload.Sub, payload)
 
 	conn, err := websocket.Upgrade(w, r, nil, 1024, 1024)
 

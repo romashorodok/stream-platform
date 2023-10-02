@@ -21,8 +21,10 @@ import (
 	"github.com/romashorodok/stream-platform/pkg/subject"
 	"github.com/romashorodok/stream-platform/pkg/variables"
 	"github.com/romashorodok/stream-platform/services/stream/internal/handler/stream"
+	"github.com/romashorodok/stream-platform/services/stream/internal/ingestcontroller"
 	"github.com/romashorodok/stream-platform/services/stream/internal/storage/postgress/repository"
 	"github.com/romashorodok/stream-platform/services/stream/internal/streamsvc"
+	"github.com/romashorodok/stream-platform/services/stream/pkg/service"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -168,10 +170,17 @@ func WithOpenAPI3FilterOptions() openapi3filter.Options {
 type IngestOperatorClientParams struct {
 	fx.In
 
-	Config *IngestOperatorConfig
+	SystemConfig *service.StreamSystemConfig
+	Config       *IngestOperatorConfig
 }
 
 func WithIngestOperatorClient(params IngestOperatorClientParams) ingestioncontrollerpb.IngestControllerServiceClient {
+	if params.SystemConfig.Standalone {
+		return ingestcontroller.NewStandaloneIngestControllerStub(ingestcontroller.StandaloneIngestControllerStubParams{
+			Config: params.SystemConfig,
+		})
+	}
+
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	conn, err := grpc.Dial(
 		net.JoinHostPort(
@@ -324,6 +333,8 @@ func main() {
 	}))
 
 	fx.New(
+		service.StreamSystemModule,
+
 		fx.Provide(
 			GetRouter,
 			fx.Annotate(
@@ -345,6 +356,7 @@ func main() {
 
 			repository.NewActiveStreamRepository,
 			streamsvc.NewStreamStatus,
+			streamsvc.NewStreamService,
 
 			NewHTTPConfig,
 			NewDatabaseConfig,
