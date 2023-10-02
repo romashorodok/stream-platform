@@ -30,6 +30,7 @@ message StartServerResponse {
 message StopServerRequest {
   string deployment = 1;
   string namespace = 2;
+  BroadcasterMeta meta = 3;
 }
 
 message StopServerResponse {

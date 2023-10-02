@@ -170,6 +170,8 @@ func WithOpenAPI3FilterOptions() openapi3filter.Options {
 type IngestOperatorClientParams struct {
 	fx.In
 
+	NatsJs       nats.JetStreamContext
+	NatsConn     *nats.Conn
 	SystemConfig *service.StreamSystemConfig
 	Config       *IngestOperatorConfig
 }
@@ -178,6 +180,8 @@ func WithIngestOperatorClient(params IngestOperatorClientParams) ingestioncontro
 	if params.SystemConfig.Standalone {
 		return ingestcontroller.NewStandaloneIngestControllerStub(ingestcontroller.StandaloneIngestControllerStubParams{
 			Config: params.SystemConfig,
+			Conn:   params.NatsConn,
+			JS:     params.NatsJs,
 		})
 	}
 

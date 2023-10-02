@@ -57,6 +57,10 @@ func (s *StreamService) StartIngestServer(ctx context.Context, token *auth.Token
 		_, _ = s.ingestController.StopServer(ctx, &ingestioncontrollerpb.StopServerRequest{
 			Namespace:  response.Namespace,
 			Deployment: response.Deployment,
+			Meta: &ingestioncontrollerpb.BroadcasterMeta{
+				BroadcasterId: token.UserID.String(),
+				Username:      token.Sub,
+			},
 		})
 
 		log.Printf("[%s]: Unable insert stream. Err: %s", token.Sub, err)
@@ -81,6 +85,10 @@ func (s *StreamService) StopIngestServer(ctx context.Context, token *auth.TokenP
 	if _, err := s.ingestController.StopServer(ctx, &ingestioncontrollerpb.StopServerRequest{
 		Namespace:  stream.Namespace,
 		Deployment: stream.Deployment,
+		Meta: &ingestioncontrollerpb.BroadcasterMeta{
+			BroadcasterId: token.UserID.String(),
+			Username:      token.Sub,
+		},
 	}); err != nil {
 		log.Printf("[%s]: Unable stop stream. Err: %s", token.Sub, err)
 		return UnableStopStream
