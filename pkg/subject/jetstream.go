@@ -1,6 +1,8 @@
 package subject
 
 import (
+	"time"
+
 	"github.com/nats-io/nats.go"
 )
 
@@ -13,4 +15,5 @@ var INGEST_DESTROYING_STREAM_CONFIG = &nats.StreamConfig{
 	Discard:   nats.DiscardOld,
 	// NOTE: It's not replace nack subjects. Even with same msg id
 	// Duplicates: time.Millisecond * 100,
+	Duplicates: time.Millisecond,
 }

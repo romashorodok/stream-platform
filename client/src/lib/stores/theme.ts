@@ -1,14 +1,13 @@
-import { writable } from "svelte/store";
+import { writable } from 'svelte/store';
 
 const Themes = {
-	"default": 0,
-	"UNSPECIFIED": 100,
+	default: 0,
+	UNSPECIFIED: 100
 } as const;
 
 type Theme = keyof typeof Themes;
 
-const theme = writable<Theme>("default");
-
+const theme = writable<Theme>('default');
 
 const SCHEME_ATTRIBUTE = 'data-color-scheme';
 
@@ -26,11 +25,7 @@ const scheme = {
 			const colorScheme = event.matches ? 'dark' : 'light';
 			document.documentElement.setAttribute('data-color-scheme', colorScheme);
 		});
-	},
+	}
 };
 
-export {
-	theme,
-	scheme,
-};
-
+export { theme, scheme };

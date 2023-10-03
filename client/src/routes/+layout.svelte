@@ -5,6 +5,7 @@
 	import { logout } from '$lib/stores/auth';
 	import { accessToken, canAccessProtectedRoutes } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
+	import Toast from '$lib/components/base/toast.svelte';
 
 	onMount(() => {
 		const unsubscribe = accessToken.subscribe((token) => {
@@ -24,17 +25,21 @@
 </script>
 
 <div class="contents min-h-inherit">
-	<div class="flex flex-col min-h-inherit max-h-screen">
+	<div class="flex flex-col min-h-inherit max-h-screen m-2">
 		<nav
-			class="flex-1 max-h-[50px] min-h-[50px] theme-bg-base theme-fg-base theme-shadow-base z-[100]"
+			class="flex flex-1 p-3 max-h-[50px] min-h-[50px] justify-between items-center theme-bg-base theme-fg-base theme-shadow-base z-[100] rounded-md"
 		>
-			<a href="/">Home</a>
+			<div>
+				<a href="/">Home</a>
 
-			<button on:click={dashboard} type="button">My dashboard</button>
-			<button on:click={login} type="button">Log In</button>
-			<button on:click={logout} type="button">Log Out</button>
+				<button on:click={dashboard} type="button">My dashboard</button>
+			</div>
+			<div>
+				<button on:click={login} type="button">Log In</button>
+				<button on:click={logout} type="button">Log Out</button>
+			</div>
 		</nav>
-		<div class="flex flex-row flex-1 box-border overflow-hidden">
+		<div class="flex flex-row flex-1 pt-3 box-border overflow-hidden">
 			<!-- <aside class="w-[220px] theme-bg-base theme-fg-base"> -->
 			<!-- 	<button on:click={() => scheme.light()}>Light mode</button> -->
 			<!-- 	<button on:click={() => scheme.dark()}>Dark mode</button> -->
@@ -47,6 +52,8 @@
 		<!-- <footer class="theme-bg-base theme-fg-base">Some content</footer> -->
 	</div>
 </div>
+
+<Toast />
 
 <style lang="postcass">
 	:global(html) {
@@ -73,6 +80,10 @@
 		color: var(--color-text-base);
 	}
 
+	:global(.theme-bg-hover-base) {
+		background: var(--color-background-hover-base);
+	}
+
 	:global(.theme-bg-base) {
 		background: var(--color-background-base);
 	}
@@ -91,6 +102,38 @@
 
 	:global(.theme-fg-accent) {
 		color: var(--color-text-accent);
+	}
+
+	:global(.theme-bg-hover-accent) {
+		&:hover {
+			background: var(--color-background-hover-accent) !important;
+		}
+	}
+
+	:global(.theme-fg-hover-accent) {
+		&:hover {
+			color: var(--color-text-hover-accent) !important;
+		}
+	}
+
+	:global(.theme-bg-accent-action) {
+		background: var(--color-background-accent-action);
+	}
+
+	:global(.theme-fg-accent-action) {
+		color: var(--color-text-accent-action);
+	}
+
+	:global(.theme-bg-hover-accent-action) {
+		&:hover {
+			background: var(--color-background-hover-accent-action) !important;
+		}
+	}
+
+	:global(.theme-fg-hover-accent-action) {
+		&:hover {
+			color: var(--color-text-hover-accent-action) !important;
+		}
 	}
 
 	:global(.theme-bg-error) {

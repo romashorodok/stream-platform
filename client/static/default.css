@@ -1,6 +1,5 @@
-
 :root {
-  --color-amber-dark-10: hsl(43, 100%, 64.0%);
+  --color-amber-dark-10: hsl(43, 100%, 64%);
 
   --color-red-dark-10: hsl(359, 84.8%, 67.6%);
 
@@ -11,70 +10,113 @@
   --color-slate-dark-4: hsl(222, 6.6%, 19.4%);
   --color-slate-dark-5: hsl(218, 6.5%, 22.1%);
   --color-slate-dark-6: hsl(214, 6.4%, 25.1%);
-  --color-slate-dark-11: hsl(220, 7.0%, 70.0%);
+  --color-slate-dark-11: hsl(220, 7%, 70%);
 
+  --color-indigo-dark-8: hsl(226, 60.0%, 52.0%);
   --color-indigo-dark-10: hsl(230, 73.9%, 63.3%);
+
+  --color-ruby-dark-8: hsl(348, 75.0%, 58.5%);
+  --color-ruby-dark-10: hsl(349, 84.1%, 67.1%);
 }
 
 :root {
   --color-background-body-dark: var(--color-slate-dark-3);
   --color-background-base-dark: var(--color-slate-dark-4);
+  --color-background-hover-base-dark: var(--color-slate-dark-6);
   --color-background-accent-dark: var(--color-indigo-dark-10);
+  --color-background-hover-accent-dark: var(--color-indigo-dark-8);
+  --color-background-accent-action-dark: var(--color-ruby-dark-10);
+  --color-background-hover-accent-action-dark: var(--color-ruby-dark-8);
   --color-background-error-dark: var(--color-red-dark-10);
 
   --color-text-body-dark: var(--color-slate-dark-11);
   --color-text-base-dark: var(--color-slate-dark-11);
+  --color-text-hover-base-dark: var(--color-slate-dark-11);
   --color-text-accent-dark: white;
+  --color-text-hover-accent-dark: white;
+  --color-text-accent-action-dark: white;
+  --color-text-hover-accent-action-dark: white;
   --color-text-error-dark: white;
-
 
   --color-background-body-light: var(--color-white-10);
   --color-background-base-ligth: var(--color-white-10);
+  --color-background-hover-base-light: var(--color-white-10);
   --color-background-accent-light: var(--color-amber-dark-10);
+  --color-background-hover-accent-light: var(--color-amber-dark-6);
+  --color-background-accent-action-light: var(--color-ruby-dark-10);
+  --color-background-hover-accent-action-light: var(--color-ruby-dark-10);
   --color-background-error-light: var(--color-red-dark-10);
 
   --color-text-body-light: black;
   --color-text-base-light: black;
+  --color-text-hover-base-light: black;
   --color-text-accent-light: black;
+  --color-text-hover-accent-light: black;
+  --color-text-accent-action-light: black;
+  --color-text-hover-accent-action-light: black;
   --color-text-error-light: white;
 }
 
-
-:root[data-color-scheme="light"] {
-  --color-background-body: var(--color-background-body-light); 
+:root[data-color-scheme='light'] {
+  --color-background-body: var(--color-background-body-light);
   --color-background-base: var(--color-background-base-ligth);
+  --color-background-hover-base: var(--color-background-hover-base-light);
   --color-background-accent: var(--color-background-accent-light);
+  --color-background-hover-accent: var(--color-background-hover-accent-light);
+  --color-background-accent-action: var(--color-background-accent-action-light);
+  --color-background-hover-accent-action: var(--color-background-hover-accent-action-light);
   --color-background-error: var(--color-background-error-light);
 
   --color-text-body: var(--color-text-body-light);
   --color-text-base: var(--color-text-base-light);
+  --color-text-hover-base: var(--color-text-hover-base-light);
   --color-text-accent: var(--color-text-accent-light);
+  --color-text-hover-accent: var(--color-text-hover-accent-light);
+  --color-text-accent-action: var(--color-text-accent-action-light);
+  --color-text-hover-accent-action: var(--color-text-hover-accent-action-light);
   --color-text-error: var(--color-text-error-light);
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --color-background-body: var(--color-background-body-light); 
+    --color-background-body: var(--color-background-body-light);
     --color-background-base: var(--color-background-base-ligth);
+    --color-background-hover-base: var(--color-background-hover-base-light);
     --color-background-accent: var(--color-background-accent-light);
+    --color-background-hover-accent: var(--color-background-hover-accent-light);
+    --color-background-accent-action: var(--color-background-accent-action-light);
+    --color-background-hover-accent-action: var(--color-background-hover-accent-action-light);
     --color-background-error: var(--color-background-error-light);
 
     --color-text-body: var(--color-text-body-light);
     --color-text-base: var(--color-text-base-light);
+    --color-text-hover-base: var(--color-text-hover-base-light);
     --color-text-accent: var(--color-text-accent-light);
+    --color-text-hover-accent: var(--color-text-hover-accent-light);
+    --color-text-accent-action: var(--color-text-accent-action-light);
+    --color-text-hover-accent-action: var(--color-text-hover-accent-action-light);
     --color-text-error: var(--color-text-error-light);
   }
 }
 
-:root[data-color-scheme="dark"] {
+:root[data-color-scheme='dark'] {
   --color-background-body: var(--color-background-body-dark);
   --color-background-base: var(--color-background-base-dark);
+  --color-background-hover-base: var(--color-background-hover-base-dark);
   --color-background-accent: var(--color-background-accent-dark);
+  --color-background-hover-accent: var(--color-background-hover-accent-dark);
+  --color-background-accent-action: var(--color-background-accent-action-dark);
+  --color-background-hover-accent-action: var(--color-background-hover-accent-action-dark);
   --color-background-error: var(--color-background-error-dark);
 
   --color-text-body: var(--color-text-body-dark);
   --color-text-base: var(--color-text-base-dark);
+  --color-text-hover-base: var(--color-text-hover-base-dark);
   --color-text-accent: var(--color-text-accent-dark);
+  --color-text-hover-accent: var(--color-text-accent-dark);
+  --color-text-hover-hover-accent: var(--color-text-hover-accent-dark);
+  --color-text-accent-action: var(--color-text-accent-action-dark);
+  --color-text-hover-accent-action: var(--color-text-hover-accent-action-dark);
   --color-text-error: var(--color-text-error-dark);
 }
 
@@ -82,13 +124,20 @@
   :root {
     --color-background-body: var(--color-background-body-dark);
     --color-background-base: var(--color-background-base-dark);
+    --color-background-hover-base: var(--color-background-hover-base-dark);
     --color-background-accent: var(--color-background-accent-dark);
+    --color-background-hover-accent: var(--color-background-hover-accent-dark);
+    --color-background-accent-action: var(--color-background-accent-action-dark);
+    --color-background-hover-accent-action: var(--color-background-hover-accent-action-dark);
     --color-background-error: var(--color-background-error-dark);
 
     --color-text-body: var(--color-text-body-dark);
     --color-text-base: var(--color-text-base-dark);
+    --color-text-hover-base: var(--color-text-hover-base-dark);
     --color-text-accent: var(--color-text-accent-dark);
+    --color-text-hover-accent: var(--color-text-hover-accent-dark);
+    --color-text-accent-action: var(--color-text-accent-action-dark);
+    --color-text-hover-accent-action: var(--color-text-hover-accent-dark);
     --color-text-error: var(--color-text-error-dark);
   }
 }
-

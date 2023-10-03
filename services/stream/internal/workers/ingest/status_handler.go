@@ -21,8 +21,6 @@ func (work *ingestStatusWorker) Start() {
 
 	work.conn.Subscribe(subject.IngestAnyUserDeployed, func(msg *nats.Msg) {
 		var req subject.IngestDeployed
-		log.Println("Catch message", msg)
-
 
 		err := subject.DeserializeProtobufMsg(&req, msg)
 		if err != nil {
@@ -39,10 +37,6 @@ func (work *ingestStatusWorker) Start() {
 			broadcasterID,
 			req.Deployed,
 		)
-
-		log.Println(req.Meta.BroadcasterId)
-		log.Println(req.Meta.Username)
-		log.Println(req.Deployed)
 	})
 
 	<-context.Background().Done()

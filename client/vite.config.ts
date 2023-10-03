@@ -2,11 +2,11 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import path from 'node:path';
 
-const root = path.resolve(__dirname, "./")
-const gen = path.join(root, "./src/gen/js")
+const root = path.resolve(__dirname, './');
+const gen = path.join(root, './src/gen/js');
 
-// Intresting way of resolving  
-// 
+// Intresting way of resolving
+//
 // import { createRequire } from 'module'
 // const { resolve } = createRequire(import.meta.url)
 // const prismaClient = `prisma${path.sep}client`
@@ -21,12 +21,11 @@ const gen = path.join(root, "./src/gen/js")
 //   }
 // }
 
-
 export default defineConfig({
 	plugins: [sveltekit()],
 	resolve: {
 		alias: {
-			'$gen': gen,
-		},
-	},
+			$gen: gen
+		}
+	}
 });

@@ -36,7 +36,8 @@ func JsPublishProtobufWithID(conn nats.JetStream, subject string, id string, mes
 	}
 
 	msg := nats.NewMsg(subject)
-	msg.Header.Add(NATS_MSG_ID, id)
+	// TODO: If send same message with same id. It's will be like a duplicate and will dropped
+	// msg.Header.Add(NATS_MSG_ID, id)
 	msg.Data = bytes
 
 	return conn.PublishMsg(msg)

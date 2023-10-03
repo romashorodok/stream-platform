@@ -2,21 +2,21 @@ import * as channelpb from '$gen/streaming/v1alpha/channel';
 import { writable, type Readable, type Writable } from 'svelte/store';
 
 interface WebsocketMessage {
-	Process(data: string): void
+	Process(data: string): void;
 	RegistryName(): string;
 }
 
 interface SvelteWritableMessage<F> {
-	writable: Writable<F | undefined>
+	writable: Writable<F | undefined>;
 }
 
-type WebsocketStatefulMessage<F> = SvelteWritableMessage<F> & WebsocketMessage
+type WebsocketStatefulMessage<F> = SvelteWritableMessage<F> & WebsocketMessage;
 
 abstract class WebsocketMessageBase<F> implements SvelteWritableMessage<F> {
 	readonly writable: Writable<F>;
 
 	constructor() {
-		this.writable = writable<F>(undefined)
+		this.writable = writable<F>(undefined);
 	}
 
 	abstract RegistryName(): string;
@@ -24,16 +24,18 @@ abstract class WebsocketMessageBase<F> implements SvelteWritableMessage<F> {
 
 type StreamStatusBaseType = channelpb.StreamStatus;
 
-export class StreamStatus extends WebsocketMessageBase<StreamStatusBaseType> implements WebsocketMessage {
-
+export class StreamStatus
+	extends WebsocketMessageBase<StreamStatusBaseType>
+	implements WebsocketMessage
+{
 	RegistryName(): string {
 		return channelpb.StreamStatus.typeName;
 	}
 
 	Process(data: string): void {
-		const streamStatus = channelpb.StreamStatus.fromJsonString(data)
+		const streamStatus = channelpb.StreamStatus.fromJsonString(data);
 
-		this.writable.set(streamStatus)
+		this.writable.set(streamStatus);
 	}
 }
 
@@ -45,23 +47,23 @@ class WebsocketMesssageRegistry {
 	}
 
 	OnMessage(messageType: string, data: string) {
-		const messageHandler = this.registry.get(messageType)
+		const messageHandler = this.registry.get(messageType);
 
 		if (!messageHandler) {
-			throw new Error(`not found message handler of type: ${messageType}`)
+			throw new Error(`not found message handler of type: ${messageType}`);
 		}
 
-		messageHandler?.Process(data)
+		messageHandler?.Process(data);
 	}
 
 	On<F>(message: WebsocketStatefulMessage<F>): Readable<F | undefined> {
 		const state = this.registry.get(message.RegistryName());
 
 		if (!state) {
-			throw new Error(`not found message handler of type: ${message.RegistryName()}`)
+			throw new Error(`not found message handler of type: ${message.RegistryName()}`);
 		}
 
-		return state.writable
+		return state.writable;
 	}
 }
 
@@ -78,6 +80,5 @@ export async function HandleDashboardWebsocket(event: MessageEvent<any>) {
 
 export const streamStatusMessage = new StreamStatus();
 
-export const dashboardRegistry = new WebsocketMesssageRegistry()
-dashboardRegistry.Register(streamStatusMessage)
-
+export const dashboardRegistry = new WebsocketMesssageRegistry();
+dashboardRegistry.Register(streamStatusMessage);

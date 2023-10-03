@@ -1,3 +1,3 @@
-import { dashboardRegistry, streamStatusMessage } from "$lib/websocket/registry"
+import { dashboardRegistry, streamStatusMessage } from '$lib/websocket/registry';
 
-export const streamStatus = dashboardRegistry.On(streamStatusMessage)
+export const streamStatus = dashboardRegistry.On(streamStatusMessage);

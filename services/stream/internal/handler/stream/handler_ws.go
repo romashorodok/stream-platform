@@ -107,10 +107,8 @@ func (s *StreamingService) StreamingServiceStreamChannel(w http.ResponseWriter, 
 			msg := <-peer.Recv()
 
 			log.Println(string(msg.Data))
-
 		}
 	}()
 
 	<-peer.Done()
-	log.Println("Done")
 }
