@@ -4,6 +4,16 @@ package subject.v1alpha;
 
 option go_package = "github.com/romashorodok/stream-platform/gen/golang/subject/v1alpha;subjectpb";
 
+enum IngestEgressType  {
+  STREAM_TYPE_UNSPECIFIED = 0;
+  STREAM_TYPE_HLS = 1;
+  STREAM_TYPE_WEBRTC = 2;
+}
+
+message IngestEgress {
+  IngestEgressType type = 1;
+}
+
 message BroadcasterMeta {
   string broadcaster_id = 1;
   string username = 2;
@@ -12,6 +22,7 @@ message BroadcasterMeta {
 message IngestDeployed {
   bool deployed = 1;
   BroadcasterMeta meta = 2;
+  repeated IngestEgress egresses = 3;
 }
 
 message IngestDestroyed {

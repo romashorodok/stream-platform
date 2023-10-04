@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package streaming.v1alpha;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+
+import "openapiv3/annotations.proto";
+
+option go_package = "github.com/romashorodok/stream-platform/gen/golang/streaming/v1alpha;streamingpb";
+
+service StreamChannelsService {
+  option (google.api.default_host) = "localhost";
+  
+  rpc StreamChannelList(StreamChannelListRequest) returns (StreamChannelListResponse) {
+    option(google.api.http) = {
+      get: "/stream-channels",
+    };
+  };
+}
+
+enum StreamEgressType  {
+  STREAM_TYPE_UNSPECIFIED = 0;
+  STREAM_TYPE_HLS = 1;
+  STREAM_TYPE_WEBRTC = 2;
+}
+
+message StreamEgress {
+  StreamEgressType type = 1;
+}
+
+message StreamChannel {
+  string title = 1;
+  repeated StreamEgress egresses = 2;
+}
+
+message StreamChannelListRequest {
+}
+
+message StreamChannelListResponse {
+  repeated StreamChannel channels = 1;
+}

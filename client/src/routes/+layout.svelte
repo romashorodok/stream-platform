@@ -32,7 +32,7 @@
 			<div>
 				<a href="/">Home</a>
 
-				<button on:click={dashboard} type="button">My dashboard</button>
+				<button on:click={dashboard} type="button">Studio</button>
 			</div>
 			<div>
 				<button on:click={login} type="button">Log In</button>

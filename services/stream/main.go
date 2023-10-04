@@ -359,6 +359,7 @@ func main() {
 			NewNatsJetstream,
 
 			repository.NewActiveStreamRepository,
+			repository.NewStreamEgressRepository,
 			streamsvc.NewStreamStatus,
 			streamsvc.NewStreamService,
 

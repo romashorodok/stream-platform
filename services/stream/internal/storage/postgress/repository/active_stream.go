@@ -1,10 +1,11 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
-	"errors"
 
 	. "github.com/go-jet/jet/v2/postgres"
+	"github.com/go-jet/jet/v2/qrm"
 	"github.com/google/uuid"
 	"github.com/romashorodok/stream-platform/services/stream/internal/storage/schema/postgres/public/model"
 	models "github.com/romashorodok/stream-platform/services/stream/internal/storage/schema/postgres/public/model"
@@ -70,20 +71,47 @@ func (r *ActiveStreamRepository) DeleteActiveStreamByBroadcasterId(broadcasterID
 	return err
 }
 
-func (r *ActiveStreamRepository) UpdateDeployedStatusByBroadcasterId(broadcasterID uuid.UUID, deployed bool) error {
+type UpdateDeployedStatusByBroadcasterIdResult struct {
+	ID            uuid.UUID
+	BroadcasterID uuid.UUID
+	Namespace     string
+	Deployment    string
+	Running       bool
+	Deployed      bool
+}
+
+func (r *ActiveStreamRepository) UpdateDeployedStatusByBroadcasterId(q qrm.Queryable, ctx context.Context, broadcasterID uuid.UUID, deployed bool) (*UpdateDeployedStatusByBroadcasterIdResult, error) {
 	model := model.ActiveStreams{Deployed: deployed}
 
-	result, err := ActiveStreams.UPDATE(ActiveStreams.Deployed).
-		MODEL(model).
-		WHERE(ActiveStreams.BroadcasterID.EQ(UUID(broadcasterID))).
-		Exec(r.db)
-
-	affected, err := result.RowsAffected()
-	if affected == 0 || err != nil {
-		return errors.New("not changed record or not found it.")
+	if q == nil {
+		q = r.db
 	}
 
-	return err
+	err := ActiveStreams.UPDATE(ActiveStreams.Deployed).
+		MODEL(model).
+		WHERE(ActiveStreams.BroadcasterID.EQ(UUID(broadcasterID))).
+		RETURNING(
+			ActiveStreams.ID,
+			ActiveStreams.BroadcasterID,
+			ActiveStreams.Namespace,
+			ActiveStreams.Deployment,
+			ActiveStreams.Running,
+			ActiveStreams.Deployed,
+		).
+		QueryContext(ctx, q, &model)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdateDeployedStatusByBroadcasterIdResult{
+		ID:            model.ID,
+		BroadcasterID: model.BroadcasterID,
+		Namespace:     model.Namespace,
+		Deployment:    model.Deployment,
+		Running:       model.Running,
+		Deployed:      model.Deployed,
+	}, err
 }
 
 type GetActiveStreamByBroadcasterIdResponse struct {

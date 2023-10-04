@@ -29,11 +29,14 @@ func (ctrl *StandaloneIngestControllerStub) StartServer(ctx context.Context, in 
 		ctrl.conn,
 		/* broadcasterID should be obtained from config of the ingest server that has been deployed specifically for each broadcaster. */
 		subject.NewIngestDeployed(in.Meta.BroadcasterId),
-		&subject.IngestDeployed{Deployed: true, Meta: &subjectpb.BroadcasterMeta{
-			BroadcasterId: in.Meta.BroadcasterId,
-			Username:      in.Meta.Username,
-		}},
-	)
+		&subject.IngestDeployed{
+			Deployed: true,
+			Meta:     &subjectpb.BroadcasterMeta{BroadcasterId: in.Meta.BroadcasterId, Username: in.Meta.Username},
+			Egresses: []*subjectpb.IngestEgress{
+				{Type: subjectpb.IngestEgressType_STREAM_TYPE_WEBRTC},
+				{Type: subjectpb.IngestEgressType_STREAM_TYPE_HLS},
+			},
+		})
 
 	return &ingestioncontrollerpb.StartServerResponse{
 		Deployment: ctrl.config.Deployment,
