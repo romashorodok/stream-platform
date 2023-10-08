@@ -31,7 +31,7 @@ func (work *ingestStatusWorker) Start() {
 
 		err := subject.DeserializeProtobufMsg(&req, msg)
 		if err != nil {
-			log.Printf("[Ingest Status Worker]: For %s failed to deserialize msg", msg.Data)
+			log.Printf("[Ingest Status Worker]: For %s failed to deserialize msg. Err: %s", msg.Data, err)
 			return
 		}
 
@@ -43,14 +43,14 @@ func (work *ingestStatusWorker) Start() {
 
 		tx, err := work.db.BeginTx(ctx, nil)
 		if err != nil {
-			log.Printf("[Ingest Status Worker]: For %s failed to start tx", req.Meta.BroadcasterId)
+			log.Printf("[Ingest Status Worker]: For %s failed to start tx. Err: %s", req.Meta.BroadcasterId, err)
 			return
 		}
 		defer tx.Rollback()
 
 		activeStream, err := work.activeStreamRepository.UpdateDeployedStatusByBroadcasterId(tx, ctx, broadcasterID, req.Deployed)
 		if err != nil {
-			log.Printf("[Ingest Status Worker]: For %s failed to update active stream status", req.Meta.BroadcasterId)
+			log.Printf("[Ingest Status Worker]: For %s failed to update active stream status. Err: %s", req.Meta.BroadcasterId, err)
 			return
 		}
 
@@ -65,7 +65,7 @@ func (work *ingestStatusWorker) Start() {
 
 		_, err = work.streamEgressRepository.InsertManyActiveStreamEgresses(tx, ctx, egressesDTO...)
 		if err != nil {
-			log.Printf("[Ingest Status Worker]: For %s failed to start tx", req.Meta.BroadcasterId)
+			log.Printf("[Ingest Status Worker]: For %s failed to start tx. Err: %s", req.Meta.BroadcasterId, err)
 			return
 		}
 

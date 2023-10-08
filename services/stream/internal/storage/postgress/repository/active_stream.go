@@ -3,6 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
@@ -141,6 +144,78 @@ func (r *ActiveStreamRepository) GetActiveStreamByBroadcasterId(broadcasterID uu
 		Running:       model.Running,
 		Deployed:      model.Deployed,
 	}, nil
+}
+
+type RunningActiveStreamEgress struct {
+	ID   uuid.UUID `json:"id"`
+	Type string    `json:"type"`
+}
+
+type getAllRunningActiveStreamsQuery struct {
+	ID       uuid.UUID `json:"active_stream_id"`
+	Username string    `json:"username"`
+
+	Egresses []string `json:"egresses"`
+}
+
+type RunningActiveStreams struct {
+	ID       uuid.UUID `json:"active_stream_id"`
+	Username string    `json:"username"`
+
+	Egresses []RunningActiveStreamEgress `json:"egresses"`
+}
+
+// NOTE: to map result into struct alias must have name of the struct and path of field separated by dot
+const getAllRunningActiveStreamsAlias = "get_all_running_active_streams_query"
+
+func (r *ActiveStreamRepository) GetAllRunningActiveStreams(ctx context.Context) ([]RunningActiveStreams, error) {
+	var result []RunningActiveStreams
+
+	stmt := SELECT(
+		ActiveStreams.ID.AS(fmt.Sprintf("%s.id", getAllRunningActiveStreamsAlias)),
+		ActiveStreams.Username.AS(fmt.Sprintf("%s.username", getAllRunningActiveStreamsAlias)),
+		Raw(
+			"JSON_AGG(JSON_BUILD_OBJECT('id', active_stream_egresses.id, 'type', active_stream_egresses.type))",
+		).AS("egresses"),
+	).FROM(
+		ActiveStreams.INNER_JOIN(ActiveStreamEgresses, ActiveStreams.ID.EQ(
+			ActiveStreamEgresses.ActiveStreamID,
+		)),
+	).GROUP_BY(
+		ActiveStreams.ID,
+	)
+
+	rows, err := stmt.Rows(ctx, r.db)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var model getAllRunningActiveStreamsQuery
+		var egresses []RunningActiveStreamEgress
+
+		err := rows.Scan(&model)
+		if err != nil {
+			log.Println("[GetAllRunningActiveStreams]: Unable scan row. Err:", err)
+			continue
+		}
+
+		for _, egress := range model.Egresses {
+			if err = json.Unmarshal([]byte(egress), &egresses); err != nil {
+				log.Println("Unable deserialize GetAllRunningActiveStreams.Egresses json. Err", err)
+				continue
+			}
+		}
+
+		result = append(result, RunningActiveStreams{
+			ID:       model.ID,
+			Username: model.Username,
+			Egresses: egresses,
+		})
+	}
+
+	return result, nil
 }
 
 type ActiveStreamRepositoryParams struct {

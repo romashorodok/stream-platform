@@ -38,8 +38,9 @@ func (ctrl *StandaloneIngestControllerStub) StartServer(ctx context.Context, in 
 			},
 		})
 
+	// NOTE: Operator must return namespace and unique deployment name for each ingest
 	return &ingestioncontrollerpb.StartServerResponse{
-		Deployment: ctrl.config.Deployment,
+		Deployment: in.Meta.Username,
 		Namespace:  ctrl.config.Namespace,
 	}, nil
 }
