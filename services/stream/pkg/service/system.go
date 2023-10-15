@@ -9,11 +9,17 @@ import (
 )
 
 type StreamSystemConfig struct {
-	Standalone     bool
-	Deployment     string
-	Namespace      string
-	IngestUri      string
-	IngestTemplate string
+	Standalone       bool
+	IngestStandalone *IngestStandaloneConfig
+}
+
+type IngestStandaloneConfig struct {
+	Deployment        string
+	Namespace         string
+	IngestUri         string
+	IngestTemplate    string
+	IngestWebrtcRoute string
+	IngestHLSRoute    string
 }
 
 func NewStreamSystemConfig() *StreamSystemConfig {
@@ -25,11 +31,16 @@ func NewStreamSystemConfig() *StreamSystemConfig {
 	}
 
 	return &StreamSystemConfig{
-		Standalone:     *standalone,
-		Deployment:     envutils.Env(variables.STREAM_STANDALONE_INGEST_DEPLOYMENT, variables.STREAM_STANDALONE_INGEST_DEPLOYMENT_DEFAULT),
-		Namespace:      envutils.Env(variables.STREAM_STANDALONE_INGEST_NAMESPACE, variables.STREAM_STANDALONE_INGEST_NAMESPACE_DEFAULT),
-		IngestUri:      envutils.Env(variables.STREAM_STANDALONE_INGEST_URI, variables.STREAM_STANDALONE_INGEST_URI_DEFAULT),
-		IngestTemplate: envutils.Env(variables.STREAM_INGEST_TEMPLATE, variables.STREAM_INGEST_TEMPLATE_DEFAULT),
+		Standalone: *standalone,
+
+		IngestStandalone: &IngestStandaloneConfig{
+			Deployment:        envutils.Env(variables.STREAM_STANDALONE_INGEST_DEPLOYMENT, variables.STREAM_STANDALONE_INGEST_DEPLOYMENT_DEFAULT),
+			Namespace:         envutils.Env(variables.STREAM_STANDALONE_INGEST_NAMESPACE, variables.STREAM_STANDALONE_INGEST_NAMESPACE_DEFAULT),
+			IngestUri:         envutils.Env(variables.STREAM_STANDALONE_INGEST_URI, variables.STREAM_STANDALONE_INGEST_URI_DEFAULT),
+			IngestTemplate:    envutils.Env(variables.STREAM_INGEST_TEMPLATE, variables.STREAM_INGEST_TEMPLATE_DEFAULT),
+			IngestWebrtcRoute: envutils.Env(variables.STREAM_STANDALONE_INGEST_EGRESS_WEBRTC, variables.STREAM_STANDALONE_INGEST_EGRESS_WEBRTC_DEFAULT),
+			IngestHLSRoute:    envutils.Env(variables.STREAM_STANDALONE_INGEST_EGRESS_HLS, variables.STREAM_STANDALONE_INGEST_EGRESS_HLS_DEFAULT),
+		},
 	}
 }
 

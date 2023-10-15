@@ -151,14 +151,14 @@ type RunningActiveStreamEgress struct {
 	Type string    `json:"type"`
 }
 
-type getAllRunningActiveStreamsQuery struct {
+type runningActiveStreamQuery struct {
 	ID       uuid.UUID `json:"active_stream_id"`
 	Username string    `json:"username"`
 
 	Egresses []string `json:"egresses"`
 }
 
-type RunningActiveStreams struct {
+type RunningActiveStream struct {
 	ID       uuid.UUID `json:"active_stream_id"`
 	Username string    `json:"username"`
 
@@ -166,14 +166,14 @@ type RunningActiveStreams struct {
 }
 
 // NOTE: to map result into struct alias must have name of the struct and path of field separated by dot
-const getAllRunningActiveStreamsAlias = "get_all_running_active_streams_query"
+const runningActiveStreamsAlias = "running_active_stream_query"
 
-func (r *ActiveStreamRepository) GetAllRunningActiveStreams(ctx context.Context) ([]RunningActiveStreams, error) {
-	var result []RunningActiveStreams
+func (r *ActiveStreamRepository) GetAllRunningActiveStreams(ctx context.Context) ([]RunningActiveStream, error) {
+	var result []RunningActiveStream
 
 	stmt := SELECT(
-		ActiveStreams.ID.AS(fmt.Sprintf("%s.id", getAllRunningActiveStreamsAlias)),
-		ActiveStreams.Username.AS(fmt.Sprintf("%s.username", getAllRunningActiveStreamsAlias)),
+		ActiveStreams.ID.AS(fmt.Sprintf("%s.id", runningActiveStreamsAlias)),
+		ActiveStreams.Username.AS(fmt.Sprintf("%s.username", runningActiveStreamsAlias)),
 		Raw(
 			"JSON_AGG(JSON_BUILD_OBJECT('id', active_stream_egresses.id, 'type', active_stream_egresses.type))",
 		).AS("egresses"),
@@ -192,7 +192,7 @@ func (r *ActiveStreamRepository) GetAllRunningActiveStreams(ctx context.Context)
 	defer rows.Close()
 
 	for rows.Next() {
-		var model getAllRunningActiveStreamsQuery
+		var model runningActiveStreamQuery
 		var egresses []RunningActiveStreamEgress
 
 		err := rows.Scan(&model)
@@ -208,7 +208,7 @@ func (r *ActiveStreamRepository) GetAllRunningActiveStreams(ctx context.Context)
 			}
 		}
 
-		result = append(result, RunningActiveStreams{
+		result = append(result, RunningActiveStream{
 			ID:       model.ID,
 			Username: model.Username,
 			Egresses: egresses,
@@ -216,6 +216,43 @@ func (r *ActiveStreamRepository) GetAllRunningActiveStreams(ctx context.Context)
 	}
 
 	return result, nil
+}
+
+func (r *ActiveStreamRepository) GetActiveStreamByUsername(ctx context.Context, username string) (*RunningActiveStream, error) {
+	var model runningActiveStreamQuery
+
+	stmt := SELECT(
+		ActiveStreams.ID.AS(fmt.Sprintf("%s.id", runningActiveStreamsAlias)),
+		ActiveStreams.Username.AS(fmt.Sprintf("%s.username", runningActiveStreamsAlias)),
+		Raw(
+			"JSON_AGG(JSON_BUILD_OBJECT('id', active_stream_egresses.id, 'type', active_stream_egresses.type))",
+		).AS("egresses"),
+	).WHERE(
+		ActiveStreams.Username.EQ(String(username)),
+	).FROM(
+		ActiveStreams.INNER_JOIN(ActiveStreamEgresses, ActiveStreams.ID.EQ(
+			ActiveStreamEgresses.ActiveStreamID,
+		)),
+	).GROUP_BY(ActiveStreams.ID)
+
+	err := stmt.QueryContext(ctx, r.db, &model)
+	if err != nil {
+		return nil, err
+	}
+
+	var egresses []RunningActiveStreamEgress
+	for _, egress := range model.Egresses {
+		if err = json.Unmarshal([]byte(egress), &egresses); err != nil {
+			log.Println("Unable deserialize GetAllRunningActiveStreams.Egresses json. Err", err)
+			continue
+		}
+	}
+
+	return &RunningActiveStream{
+		ID:       model.ID,
+		Username: model.Username,
+		Egresses: egresses,
+	}, nil
 }
 
 type ActiveStreamRepositoryParams struct {

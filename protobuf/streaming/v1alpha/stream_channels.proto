@@ -19,6 +19,13 @@ service StreamChannelsService {
       get: "/stream-channels",
     };
   };
+
+  rpc GetStreamChannel(GetStreamChannelRequest) returns (GetStreamChannelResponse) {
+    option(google.api.http) = {
+      get: "/stream-channels/{username}",
+    };
+    option (google.api.method_signature) = "username";
+  };
 }
 
 enum StreamEgressType  {
@@ -32,8 +39,9 @@ message StreamEgress {
 }
 
 message StreamChannel {
-  string title = 1;
-  repeated StreamEgress egresses = 2;
+  string username = 1;
+  string title = 2;
+  repeated StreamEgress egresses = 3;
 }
 
 message StreamChannelListRequest {
@@ -41,4 +49,11 @@ message StreamChannelListRequest {
 
 message StreamChannelListResponse {
   repeated StreamChannel channels = 1;
+}
+
+message GetStreamChannelRequest {
+}
+
+message GetStreamChannelResponse {
+  StreamChannel channel = 1;
 }

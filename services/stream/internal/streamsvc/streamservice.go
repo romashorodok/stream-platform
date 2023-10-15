@@ -28,10 +28,11 @@ type StreamService struct {
 }
 
 func (s *StreamService) StartIngestServer(ctx context.Context, token *auth.TokenPayload) error {
+	// TODO: Don't use standalone config vars
 	response, err := s.ingestController.StartServer(ctx, &ingestioncontrollerpb.StartServerRequest{
-		IngestTemplate: s.config.IngestTemplate,
+		IngestTemplate: s.config.IngestStandalone.IngestTemplate,
 		Deployment:     token.Sub,
-		Namespace:      s.config.Namespace,
+		Namespace:      s.config.IngestStandalone.Namespace,
 		Meta: &ingestioncontrollerpb.BroadcasterMeta{
 			BroadcasterId: token.UserID.String(),
 			Username:      token.Sub,

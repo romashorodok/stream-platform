@@ -49,3 +49,5 @@ export const fetchIntercepted =
 
 		return response;
 	};
+
+export type Fetch = typeof fetch

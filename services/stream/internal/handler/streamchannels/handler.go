@@ -31,7 +31,17 @@ func (hand *handler) StreamChannelsServiceStreamChannelList(w http.ResponseWrite
 		return
 	}
 
-	json.NewEncoder(w).Encode(result)
+	_ = json.NewEncoder(w).Encode(result)
+}
+
+func (hand *handler) StreamChannelsServiceGetStreamChannel(w http.ResponseWriter, r *http.Request, username string) {
+	result, err := hand.streamChannels.GetActiveStream(r.Context(), username)
+	if err != nil {
+		unableGetActiveStream(w, err)
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 func (h *handler) GetOption() httputils.HttpHandlerOption {

@@ -55,6 +55,8 @@
   --color-text-accent-action-light: black;
   --color-text-hover-accent-action-light: black;
   --color-text-error-light: white;
+
+  --color-animation-default:var(--color-amber-dark-10);
 }
 
 :root[data-color-scheme='light'] {

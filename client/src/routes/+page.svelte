@@ -1,55 +1,58 @@
 <script lang="ts">
+	import type { PageData } from './$types';
+
+	export let data: PageData;
+	$: ({ channelsResponse } = data);
+
+	let channels: typeof channelsResponse.channels | null;
+	$: channels = channelsResponse?.channels || null;
+
+	$: console.log(data);
 </script>
 
-<h1 class="text-green-500">Welcome to SvelteKit</h1>
+<div class="flex flex-wrap flex-row gap-3 cursor-pointer">
+	{#if channels}
+		{#each channels as channel}
+			<a href="/s/{channel.username}">
+				<div
+					class="animation theme-bg-base theme-fg-base theme-shadow-base stream-card rounded-md"
+				/>
+				<div class="px-2 pt-1">
+					{channel.username}
+				</div>
+			</a>
+		{/each}
+	{:else}
+		<p>Empty streams</p>
+	{/if}
+</div>
 
-<p class="test-test">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
+<style lang="scss">
+	$stream-card-w: 21rem;
+	$stream-card-h: 11rem;
 
-<p class="theme-bg-base theme-fg-base m-4 p-4">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
+	.stream-card {
+		max-width: $stream-card-w;
+		min-width: $stream-card-w;
 
-<p class="theme-bg-accent theme-fg-accent m-4 p-4">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
+		max-height: $stream-card-h;
+		min-height: $stream-card-h;
+	}
 
-<p class="theme-bg-error theme-fg-error m-4 p-4">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
+	.animation {
+		&:hover {
+			background-position: 100% 100%, 0 100%;
+			background-size: 0 3px, 100% 3px;
+		}
 
-<h1 class="text-green-500">Welcome to SvelteKit</h1>
-<h1 class="text-green-500">Welcome to SvelteKit</h1>
+		background-image: linear-gradient(transparent, transparent),
+			linear-gradient(var(--color-animation-default), var(--color-animation-default));
 
-<p class="test-test">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
+		background-position: 100% 100%, 0 100%;
+		background-repeat: no-repeat;
+		background-size: 100% 3px, 0 3px;
+		border-bottom-width: 0;
 
-<p class="theme-bg-base theme-fg-base m-4 p-4">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
-
-<p class="theme-bg-accent theme-fg-accent m-4 p-4">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
-
-<p class="theme-bg-error theme-fg-error m-4 p-4">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
-
-<p class="test-test">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
-
-<p class="theme-bg-base theme-fg-base m-4 p-4">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
-
-<p class="theme-bg-accent theme-fg-accent m-4 p-4">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
-
-<p class="theme-bg-error theme-fg-error m-4 p-4">
-	Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation
-</p>
+		transition: background-size 0.5s ease-in-out, background-position 0.5s ease-in-out;
+	}
+</style>

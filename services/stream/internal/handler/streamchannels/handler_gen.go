@@ -15,12 +15,19 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
+	"github.com/oapi-codegen/runtime"
 )
+
+// GetStreamChannelResponse defines model for GetStreamChannelResponse.
+type GetStreamChannelResponse struct {
+	Channel *StreamChannel `json:"channel,omitempty"`
+}
 
 // StreamChannel defines model for StreamChannel.
 type StreamChannel struct {
 	Egresses *[]StreamEgress `json:"egresses,omitempty"`
 	Title    *string         `json:"title,omitempty"`
+	Username *string         `json:"username,omitempty"`
 }
 
 // StreamChannelListResponse defines model for StreamChannelListResponse.
@@ -38,6 +45,9 @@ type ServerInterface interface {
 
 	// (GET /stream-channels)
 	StreamChannelsServiceStreamChannelList(w http.ResponseWriter, r *http.Request)
+
+	// (GET /stream-channels/{username})
+	StreamChannelsServiceGetStreamChannel(w http.ResponseWriter, r *http.Request, username string)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -46,6 +56,11 @@ type Unimplemented struct{}
 
 // (GET /stream-channels)
 func (_ Unimplemented) StreamChannelsServiceStreamChannelList(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /stream-channels/{username})
+func (_ Unimplemented) StreamChannelsServiceGetStreamChannel(w http.ResponseWriter, r *http.Request, username string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -64,6 +79,32 @@ func (siw *ServerInterfaceWrapper) StreamChannelsServiceStreamChannelList(w http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.StreamChannelsServiceStreamChannelList(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// StreamChannelsServiceGetStreamChannel operation middleware
+func (siw *ServerInterfaceWrapper) StreamChannelsServiceGetStreamChannel(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "username", runtime.ParamLocationPath, chi.URLParam(r, "username"), &username)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StreamChannelsServiceGetStreamChannel(w, r, username)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -189,6 +230,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/stream-channels", wrapper.StreamChannelsServiceStreamChannelList)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/stream-channels/{username}", wrapper.StreamChannelsServiceGetStreamChannel)
+	})
 
 	return r
 }
@@ -196,13 +240,14 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/5SSwW6cMBCGX6X62yMF2tx8q6oeolZq1RyjPbjOLDgC25qZRIoQ717ZsLtZsXvYE8Ye",
-	"f3zzDxNcHFMMFFRgJojrabRl+aBMdvze2xBoyBuJYyJWT+WYOiaRZe2VxrL4xLSHwcfmRG1WZLPwfpRr",
-	"mCvoWyIYWGb7Vt69DpQh64Eo+9BhPpXGf8/kNNeeuf3yon9JUgxCW0+3FN3qeeh7I3pdZ21tY7CUT9hH",
-	"Hq3CgMLLiCPGB6WO+BI5b/mwj4WyxHPeujwQv3pHH779uUeFV2LxMcCgrdv6S1aLiYJNHgZ3dVvfoUKy",
-	"2hevRgrq8/uEOtL8yPpWfQz3T9c+uRkBKvA6hYL62rYl/xiUQqHalAbvCrd5lux5+OFumsnZvEtGTySO",
-	"fdKl998/lyxtJzCPl+2xKxeFOGcG8zjhhQcY9KpJTNMM0dmhj6KYd0fWhGDHq0PAvJv/BwAA///M7Evs",
-	"UAMAAA==",
+	"H4sIAAAAAAAC/7SUT4/TMBDFvwp6cAxNYG++IYTQCiQQe0R7MOk08Sqxzcyk0irKd0d20u32n5YKcaob",
+	"T9689xs7I+rQx+DJq8CMkLql3ublZ9I7ZbL9x9Z6T90Pkhi8UNqLHCKxOsqV9VyQlm+YNjB4Xe5ly0Wz",
+	"PFDDNBXQx0gwCL8eqFZMBQ5LThpRwyQyr51SL3/X8lN+DfuGltk+5v9Ouxxo2RBl55u0Mwixt/25zReN",
+	"f3WiL9K6NsQTt+MUl+0suU8czOUjNoF7qzAgP/R4knFeqSE+p5weOb8JWWVmdxhd7oi3rqZXH77fosCW",
+	"WFzwMKhW1epdshYieRsdDG5W1eoGBaLVNvsqJUu9fU6oIU0/yb5VF/zt+lLLkxGgAC9TyFLvqyrzD17J",
+	"Z1UbY+fqrFs+SPK5uwFXzeRg3pnRmqRmF3XO/u3LzNI2AvPzvHvcp5JjAuW4O4fTdTCOL2/GzLYnJU4m",
+	"RrjkLKFHgfmg7898Avd7cExrGOWBimdUji/D/X+kfPET9A+QpwJCvN1hGLiDQasaxZRlF2rbtUEUKdei",
+	"Ne74nNec7qc/AQAA//+3mDsoRgUAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
