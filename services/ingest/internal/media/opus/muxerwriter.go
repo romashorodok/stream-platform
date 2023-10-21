@@ -1,7 +1,6 @@
 package opus
 
 import (
-	"bufio"
 	"errors"
 	"io"
 	"sync"
@@ -59,7 +58,7 @@ func NewRtpToWebmOpusWriter() *RtpToWebmOpusMuxWriter {
 	rtpToWebmOpusWriter.opusBuilder = samplebuilder.New(10, &codecs.OpusPacket{}, 48_000)
 
 	r, w := io.Pipe()
-	buff := newBufioWriterCloser(w)
+	buff := media.NewBufioWriterCloser(w)
 
 	ws, _ := webm.NewSimpleBlockWriter(buff, []webm.TrackEntry{
 		{
@@ -78,28 +77,4 @@ func NewRtpToWebmOpusWriter() *RtpToWebmOpusMuxWriter {
 	rtpToWebmOpusWriter.webmBuilder = ws[0]
 	rtpToWebmOpusWriter.reader = r
 	return rtpToWebmOpusWriter
-}
-
-type bufioWriterCloser struct {
-	writer *bufio.Writer
-	closer io.WriteCloser
-}
-
-func newBufioWriterCloser(w io.WriteCloser) *bufioWriterCloser {
-	return &bufioWriterCloser{
-		writer: bufio.NewWriter(w),
-		closer: w,
-	}
-}
-
-func (c *bufioWriterCloser) Write(p []byte) (n int, err error) {
-	return c.writer.Write(p)
-}
-
-func (c *bufioWriterCloser) Close() error {
-	err := c.writer.Flush()
-	if err != nil {
-		return err
-	}
-	return c.closer.Close()
 }

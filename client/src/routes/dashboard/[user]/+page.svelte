@@ -9,6 +9,7 @@
 	import Button from '$lib/components/base/button.svelte';
 	import LoadingDots from '$lib/components/base/loading-dots.svelte';
 	import type { StreamStatus } from '$gen/streaming/v1alpha/channel';
+	import { startStreamConn, stopStreamConn } from '$lib/stores/studio';
 
 	export let data: PageData;
 
@@ -22,6 +23,8 @@
 	let firstLoad: boolean = true;
 	let status: StreamStatus | undefined;
 
+	onMount(() => stopStreamConn);
+
 	onMount(() => {
 		try {
 			const wsConn = env.PUBLIC_STREAM_SERVICE.replace('http://', 'ws://');
@@ -32,7 +35,6 @@
 				setTimeout(() => {
 					firstLoad = false;
 				}, 0);
-				console.log('first load');
 			};
 
 			ws.onclose = function (evt) {
@@ -125,6 +127,10 @@
 						<span class={`${loading ? 'invisible' : ''}`}>Go live</span>
 					</Button>
 				{/if}
+
+				<div>
+					<button on:click={startStreamConn}>Start</button>
+				</div>
 			{:else}
 				<LoadingDots />
 			{/if}

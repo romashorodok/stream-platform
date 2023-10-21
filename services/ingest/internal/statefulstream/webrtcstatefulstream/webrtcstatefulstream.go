@@ -10,6 +10,7 @@ import (
 	"github.com/romashorodok/stream-platform/services/ingest/internal/media/h264"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/media/opus"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/media/rtp"
+	"github.com/romashorodok/stream-platform/services/ingest/internal/media/vp8"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/mediaprocessor"
 	"go.uber.org/fx"
 )
@@ -67,6 +68,26 @@ func (s *WebrtcStatefulStream) PipeH264RemoteTrack(ctx context.Context, track *w
 	}
 }
 
+func (s *WebrtcStatefulStream) PipeVP8RemoteTrack(ctx context.Context, track *webrtc.TrackRemote) {
+	defer log.Println("[PipeVP8RemoteTrack] canceled")
+
+	vp8 := media.NewMuxerBuilder(vp8.NewRtpToWebmVP8Writer(),
+		media.NewTargetMediaWriter(s.videoPipeWriter),
+	)
+
+	rtp := media.NewDemuxerBuilder(rtp.NewRtpTrackDemuxerReader(track),
+		rtp.NewRtpTrackWriter(s.Video),
+		media.NewTargetMediaWriter(vp8),
+	)
+
+	go vp8.Mux()
+	go rtp.Demux()
+
+	select {
+	case <-ctx.Done():
+	}
+}
+
 func (s *WebrtcStatefulStream) PipeOpusRemoteTrack(ctx context.Context, track *webrtc.TrackRemote) {
 	defer log.Println("[PipeOpusRemoteTrack] canceled")
 
@@ -94,6 +115,10 @@ func (s *WebrtcStatefulStream) Destroy() error {
 	return nil
 }
 
+func (s *WebrtcStatefulStream) SetVideoTrack(track *webrtc.TrackLocalStaticRTP) {
+	s.Video = track
+}
+
 type WebrtcAllocatorFunc func() (*WebrtcStatefulStream, error)
 
 type WebrtcAllocatorFuncParams struct {
@@ -109,7 +134,10 @@ func NewWebrtcAllocatorFunc(params WebrtcAllocatorFuncParams) WebrtcAllocatorFun
 			return nil, err
 		}
 
-		video, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264}, "video", "pion")
+		video, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{
+			MimeType: webrtc.MimeTypeH264,
+			// MimeType: webrtc.MimeTypeVP8,
+		}, "video", "pion")
 		if err != nil {
 			return nil, err
 		}

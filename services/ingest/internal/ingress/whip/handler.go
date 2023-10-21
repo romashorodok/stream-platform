@@ -15,6 +15,13 @@ import (
 	"go.uber.org/fx"
 )
 
+func Cors(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-cache, no-store, private")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+}
+
 type handler struct {
 	webrtcAPI            *webrtc.API
 	ingestSystemConfig   *service.IngestSystemConfig
@@ -24,6 +31,12 @@ type handler struct {
 var _ httputils.HttpHandler = (*handler)(nil)
 
 func (h *handler) Handler(w http.ResponseWriter, r *http.Request) {
+	Cors(w)
+
+	if r.Method == "OPTIONS" {
+		return
+	}
+
 	connConfig := webrtc.Configuration{}
 
 	peerConnection, err := h.webrtcAPI.NewPeerConnection(connConfig)

@@ -132,7 +132,7 @@ func main() {
 	})
 
 	videoTrack, _ := webrtc.NewTrackLocalStaticRTP(
-		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8},
+		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264},
 		"video",
 		"pion",
 	)

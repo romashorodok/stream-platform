@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pion/ice/v2"
 	"github.com/pion/interceptor"
+	"github.com/pion/interceptor/pkg/intervalpli"
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/pkg/envutils"
 	"github.com/romashorodok/stream-platform/pkg/httputils"
@@ -112,6 +113,14 @@ func populateMediaEngine(m *webrtc.MediaEngine) error {
 		}
 	}
 
+	if err := m.RegisterCodec(
+		webrtc.RTPCodecParameters{
+			RTPCodecCapability: webrtc.RTPCodecCapability{MimeType: "video/VP8", ClockRate: 90000, Channels: 0, SDPFmtpLine: "", RTCPFeedback: nil},
+			PayloadType:        96,
+		}, webrtc.RTPCodecTypeVideo); err != nil {
+		panic(err)
+	}
+
 	for _, extension := range []string{
 		"urn:ietf:params:rtp-hdrext:sdes:mid",
 		"urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id",
@@ -177,6 +186,13 @@ func NewIngestWebrtcAPI(params IngestWebrtcAPIParams) *webrtc.API {
 	}
 
 	interceptorRegistry := &interceptor.Registry{}
+
+	intervalPliFactory, err := intervalpli.NewReceiverInterceptor()
+	if err != nil {
+		panic(err)
+	}
+	interceptorRegistry.Add(intervalPliFactory)
+
 	if err := webrtc.RegisterDefaultInterceptors(mediaEngine, interceptorRegistry); err != nil {
 		log.Fatal(err)
 	}

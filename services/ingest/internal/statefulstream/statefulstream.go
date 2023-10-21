@@ -14,6 +14,7 @@ import (
 type StatefulStream interface {
 	Ingest(context.Context) error
 	Destroy() error
+	SetVideoTrack(track *webrtc.TrackLocalStaticRTP)
 }
 
 var EmptyStatefulStream = (StatefulStream)(nil)
@@ -72,6 +73,8 @@ func (s *StatefulStreamGlobal) HandleWebrtc(ctx context.Context) (WebrtcTrackHan
 		switch track.Codec().RTPCodecCapability.MimeType {
 		case webrtc.MimeTypeOpus, "audio/OPUS":
 			stream.PipeOpusRemoteTrack(ctx, track)
+		case webrtc.MimeTypeVP8:
+			stream.PipeVP8RemoteTrack(ctx, track)
 		case webrtc.MimeTypeH264:
 			stream.PipeH264RemoteTrack(ctx, track)
 		}

@@ -10,12 +10,10 @@
 	let channel: typeof channelResponse.channel | null;
 	$: channel = channelResponse?.channel || null;
 
-	let preferEgress: string = STREAM_EGRESS[STREAM_EGRESS_TYPE.STREAM_TYPE_HLS] as any;
+	let preferEgress: string = STREAM_EGRESS[STREAM_EGRESS_TYPE.STREAM_TYPE_WEBRTC] as any;
 </script>
 
 {#if channel}
-	<!-- {JSON.stringify(channel)} -->
-
 	{#each channel.egresses as { egress: { type }, route }}
 		{#if type === preferEgress && HLS_EGRESS === preferEgress}
 			<Player source={route} />
