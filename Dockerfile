@@ -1,4 +1,24 @@
 
+FROM nixos/nix:2.16.2 as protobuf-gen
+
+WORKDIR /app
+
+COPY infra/nix/protobuf ./
+COPY buf.yaml ./buf.yaml
+COPY protobuf ./protobuf/
+COPY buf.gen.yaml ./buf.gen.yaml
+COPY buf.work.yaml ./buf.work.yaml
+COPY ./client/package.json ./client/package.json
+COPY ./client/package-lock.json ./client/package-lock.json
+
+RUN nix-build
+RUN nix-shell --command 'exit'
+
+FROM scratch as protobuf
+
+COPY --from=protobuf-gen /app/gen/ ./gen/
+COPY --from=protobuf-gen /app/client/src/gen ./client/src/gen/
+
 FROM golang:1.20.6-alpine3.18 as ingest-builder
 
 WORKDIR /app
@@ -6,7 +26,7 @@ WORKDIR /app
 COPY go.mod ./
 COPY go.sum ./
 COPY pkg ./pkg/
-COPY gen/ ./gen/
+COPY --from=protobuf /gen ./gen/
 
 RUN go mod download
 
@@ -80,7 +100,7 @@ WORKDIR /app
 
 COPY go.mod ./
 COPY pkg ./pkg/
-COPY gen/ ./gen/
+COPY --from=protobuf /gen ./gen/
 
 WORKDIR /app/services/stream
 
@@ -88,6 +108,7 @@ COPY services/stream/go.mod ./
 COPY services/stream/go.sum ./
 COPY services/stream/main.go ./main.go
 COPY services/stream/internal/ ./internal/
+COPY services/stream/pkg/ ./pkg/
 COPY services/stream/cmd/ ./cmd/
 
 RUN go mod download
@@ -117,7 +138,7 @@ WORKDIR /app
 
 COPY go.mod ./
 COPY pkg ./pkg/
-COPY gen/ ./gen/
+COPY --from=protobuf /gen ./gen/
 
 WORKDIR /app/services/identity
 
@@ -157,7 +178,7 @@ WORKDIR /app
 
 COPY go.mod ./
 COPY pkg ./pkg/
-COPY gen/ ./gen/
+COPY --from=protobuf /gen ./gen/
 
 RUN go mod download
 
@@ -173,6 +194,7 @@ COPY operators/ingestion-operator/api/ api/
 COPY operators/ingestion-operator/internal/ internal/
 COPY operators/ingestion-operator/grpcserver/ grpcserver/
 COPY operators/ingestion-operator/resource/ resource/
+COPY operators/ingestion-operator/pkg/ pkg/
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager ./cmd/main.go
 
@@ -191,6 +213,7 @@ FROM node:20-alpine3.17 as client-builder
 WORKDIR /app/client
 
 COPY client ./
+COPY --from=protobuf /client/src/gen ./src/gen
 
 RUN npm install
 RUN npm run build

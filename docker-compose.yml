@@ -2,10 +2,10 @@ version: "3.9"
 
 services:
 
-  ingest:
-    image: ${REGISTRY}/services/ingest:latest
-    build:
-      target: ingest-builder
+  # ingest:
+  #   image: ${REGISTRY}/services/ingest:latest
+  #   build:
+  #     target: ingest-builder
 
   # webrtc-client:
   #   image: ${REGISTRY}/services/ingest/webrtc-client:latest
@@ -16,17 +16,17 @@ services:
   #   image: ${REGISTRY}/services/stream:latest
   #   build:
   #     target: stream-builder
-  #
+  
   # identity:
   #   image: ${REGISTRY}/services/identity:latest
   #   build:
   #     target: identity-builder
-  #
+  
   # client:
   #   image: ${REGISTRY}/client:latest
   #   build:
   #     target: client
-  #
+  
   # ingestion-operator:
   #   image: ${REGISTRY}/operators/ingestion-operator:latest
   #   build:

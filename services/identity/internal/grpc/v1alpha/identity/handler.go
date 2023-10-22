@@ -62,9 +62,10 @@ func requireAuthMetaOnRequest(ctx context.Context, req interface{}, info *grpc.U
 		return nil, status.Error(codes.Internal, "Unable parse metadata for request.")
 	}
 
-	if info.FullMethod != identitypb.PublicKeyService_PublicKeyList_FullMethodName {
-		return handler(ctx, req)
-	}
+	// TODO: old grpc generators don't have that var
+	// if info.FullMethod != identitypb.PublicKeyService_PublicKeyList_FullMethodName {
+	// 	return handler(ctx, req)
+	// }
 
 	if auth := meta.Get("authorization"); auth == nil || auth[0] == "" {
 		return nil, status.Error(codes.FailedPrecondition, "The route require authorization metadata")
