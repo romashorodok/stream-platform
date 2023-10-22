@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/pkg/shutdown"
@@ -51,8 +52,9 @@ func (s *StatefulStreamGlobal) HandleWebrtc(ctx context.Context) (WebrtcTrackHan
 		stream.Destroy()
 	})
 
+	ctx, cancel := context.WithCancel(ctx)
+
 	go func() {
-		ctx, cancel := context.WithCancel(ctx)
 
 		s.shutdown.AddTask(func() {
 			cancel()
@@ -70,7 +72,28 @@ func (s *StatefulStreamGlobal) HandleWebrtc(ctx context.Context) (WebrtcTrackHan
 	return func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
 		log.Println("Received track ", track.Codec())
 
-		switch track.Codec().RTPCodecCapability.MimeType {
+		mime := track.Codec().MimeType
+
+		if strings.HasPrefix(mime, "video") {
+			video, err := webrtc.NewTrackLocalStaticRTP(track.Codec().RTPCodecCapability, "video", "pion")
+			if err != nil {
+				cancel()
+				return
+			}
+			stream.Video = video
+		} else if strings.HasPrefix(mime, "audio") {
+			audio, err := webrtc.NewTrackLocalStaticRTP(track.Codec().RTPCodecCapability, "audio", "pion")
+			if err != nil {
+				cancel()
+				return
+			}
+			stream.Audio = audio
+		} else {
+			cancel()
+			return
+		}
+
+		switch mime {
 		case webrtc.MimeTypeOpus, "audio/OPUS":
 			stream.PipeOpusRemoteTrack(ctx, track)
 		case webrtc.MimeTypeVP8:

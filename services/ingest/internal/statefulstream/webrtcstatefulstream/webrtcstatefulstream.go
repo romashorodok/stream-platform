@@ -129,25 +129,10 @@ type WebrtcAllocatorFuncParams struct {
 
 func NewWebrtcAllocatorFunc(params WebrtcAllocatorFuncParams) WebrtcAllocatorFunc {
 	return func() (*WebrtcStatefulStream, error) {
-		audio, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, "audio", "pion")
-		if err != nil {
-			return nil, err
-		}
-
-		video, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{
-			MimeType: webrtc.MimeTypeH264,
-			// MimeType: webrtc.MimeTypeVP8,
-		}, "video", "pion")
-		if err != nil {
-			return nil, err
-		}
-
 		audioPipeReader, audioPipeWriter := io.Pipe()
 		videoPipeReader, videoPipeWriter := io.Pipe()
 
 		return &WebrtcStatefulStream{
-			Audio:           audio,
-			Video:           video,
 			audioPipeReader: audioPipeReader,
 			audioPipeWriter: audioPipeWriter,
 			videoPipeReader: videoPipeReader,
