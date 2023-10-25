@@ -41,11 +41,11 @@ COPY services/ingest/cmd/ ./cmd/
 RUN go mod download
 
 RUN apkArch="$(apk --print-arch)"; \
-      case "$apkArch" in \
-        aarch64) export GOARCH='arm64' ;; \
-        *) export GOARCH='amd64' ;; \
-      esac; \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o ingest ./cmd/ingest/main.go
+	case "$apkArch" in \
+	aarch64) export GOARCH='arm64' ;; \
+	*) export GOARCH='amd64' ;; \
+	esac; \
+	CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o ingest ./cmd/ingest/main.go
 
 
 RUN apk add --no-cache ffmpeg
@@ -83,11 +83,11 @@ COPY services/ingest/cmd/ ./cmd/
 RUN go mod download
 
 RUN apkArch="$(apk --print-arch)"; \
-      case "$apkArch" in \
-        aarch64) export GOARCH='arm64' ;; \
-        *) export GOARCH='amd64' ;; \
-      esac; \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o webrtc-client ./cmd/webrtc-client/main.go ./cmd/webrtc-client/start_ffmpeg.go
+	case "$apkArch" in \
+	aarch64) export GOARCH='arm64' ;; \
+	*) export GOARCH='amd64' ;; \
+	esac; \
+	CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o webrtc-client ./cmd/webrtc-client/main.go ./cmd/webrtc-client/start_ffmpeg.go
 
 RUN apk add --no-cache ffmpeg
 RUN apk add font-jetbrains-mono-nerd
@@ -114,11 +114,11 @@ COPY services/stream/cmd/ ./cmd/
 RUN go mod download
 
 RUN apkArch="$(apk --print-arch)"; \
-      case "$apkArch" in \
-        aarch64) export GOARCH='arm64' ;; \
-        *) export GOARCH='amd64' ;; \
-      esac; \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o stream ./main.go
+	case "$apkArch" in \
+	aarch64) export GOARCH='arm64' ;; \
+	*) export GOARCH='amd64' ;; \
+	esac; \
+	CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o stream ./main.go
 
 CMD ["/app/services/stream/stream"]
 
@@ -151,11 +151,11 @@ COPY services/identity/pkg/ ./pkg/
 RUN go mod download
 
 RUN apkArch="$(apk --print-arch)"; \
-      case "$apkArch" in \
-        aarch64) export GOARCH='arm64' ;; \
-        *) export GOARCH='amd64' ;; \
-      esac; \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o identity ./main.go
+	case "$apkArch" in \
+	aarch64) export GOARCH='arm64' ;; \
+	*) export GOARCH='amd64' ;; \
+	esac; \
+	CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o identity ./main.go
 
 CMD ["/app/services/identity/identity"]
 
@@ -212,11 +212,16 @@ FROM node:20-alpine3.17 as client-builder
 
 WORKDIR /app/client
 
+RUN apk add --no-cache npm
+RUN apk add --no-cache nodejs
+
 COPY client ./
 COPY --from=protobuf /client/src/gen ./src/gen
 
 RUN npm install
 RUN npm run build
+
+EXPOSE 4173
 
 FROM node:20-alpine3.17 as client
 
@@ -245,11 +250,11 @@ RUN go mod download
 WORKDIR /app/cmd/migrate
 
 RUN apkArch="$(apk --print-arch)"; \
-      case "$apkArch" in \
-        aarch64) export GOARCH='arm64' ;; \
-        *) export GOARCH='amd64' ;; \
-      esac; \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o migrate ./main.go
+	case "$apkArch" in \
+	aarch64) export GOARCH='arm64' ;; \
+	*) export GOARCH='amd64' ;; \
+	esac; \
+	CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o migrate ./main.go
 
 FROM scratch as migrate
 

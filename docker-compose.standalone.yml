@@ -1,0 +1,90 @@
+version: "3.9"
+
+networks:
+  bridge:
+
+services:
+  ingest:
+    image: ${REGISTRY}/services/ingest:latest
+    build:
+      target: ingest-builder
+    networks:
+      - bridge
+    ports:
+      - 8089:8089
+  stream:
+    image: ${REGISTRY}/services/stream:latest
+    build:
+      target: stream-builder
+    environment:
+      NATS_HOST: nats
+      NATS_PORT: 4222
+      DATABASE_HOST: stream-pg
+      DATABASE_PORT: 5432
+      STREAM_IDENTITY_GRPC_PUBLIC_KEY_HOST: identity
+    networks:
+      - bridge
+    depends_on:
+      - nats
+      - stream-pg
+    ports:
+     - 8082:8082
+  identity:
+    image: ${REGISTRY}/services/identity:latest
+    build:
+      target: identity-builder
+    environment:
+      NATS_HOST: nats
+      NATS_PORT: 4222
+      DATABASE_HOST: identity-pg
+      DATABASE_PORT: 5432
+    networks:
+      - bridge
+    depends_on:
+      - nats
+      - identity-pg
+    ports:
+      - 8083:8083
+  client:
+    image: ${REGISTRY}/client:latest
+    build:
+      target: client-builder
+    environment:
+      STREAM_SERVICE: http://stream:8082
+      IDENTITY_SERVICE: http://identity:8083
+    networks:
+      - bridge
+    ports:
+      - 4173:4173
+    command: npm run preview
+
+  nats:
+    image: nats:alpine3.18
+    command:
+      - "-js"
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+      - "6222:6222"
+    networks:
+      - bridge
+  stream-pg:
+    image: postgres:15.4-alpine3.18
+    environment:
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "password"
+    networks:
+      - bridge
+    ports:
+      - 5432:5432
+  identity-pg:
+    image: postgres:15.4-alpine3.18
+    environment:
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "password"
+    networks:
+      - bridge
+    ports:
+      - 5433:5432

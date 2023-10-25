@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 
 	// @ts-ignore
-	import shaka from 'shaka-player/dist/shaka-player.compiled.debug';
+	// import shaka from 'shaka-player/dist/shaka-player.compiled.debug';
+	import shaka from 'shaka-player'
 
 	export let source: string;
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -177,21 +178,27 @@ func deleteRefreshTokenCookie(w http.ResponseWriter) {
 	http.SetCookie(w, cookie)
 }
 
-func (h IdentityHandler) TokenServiceExchangeToken(w http.ResponseWriter, r *http.Request) {
-	refreshTokenCookie, err := r.Cookie(REFRESH_TOKEN_COOKIE_NAME)
-	if err != nil {
-		deleteRefreshTokenCookie(w)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusPreconditionFailed)
+func GetRefreshTokenFromCookieOrAuthHeader(r *http.Request) (string, error) {
+	// NOTE: It's working only on client side. Cannot get it from other domain.
+	// As example when i set cookie on localhost not containered. I can get it. But when use docker.
+	// I cannot read it and remap it in request by set-cookie and by credentials include to.
 
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Message: fmt.Sprintf("Error when getting cookie from request. Error: %s", err),
-		})
-		return
+	refreshTokenCookie, err := r.Cookie(REFRESH_TOKEN_COOKIE_NAME)
+	if err == nil {
+		return refreshTokenCookie.Value, nil
 	}
 
-	rawRefreshToken := refreshTokenCookie.Value
-	if rawRefreshToken == "" {
+	plainToken := r.Header.Get("Authorization")
+	if plainToken == "" {
+		return "", errors.New("empty token")
+	}
+
+	return plainToken, nil
+}
+
+func (h IdentityHandler) TokenServiceExchangeToken(w http.ResponseWriter, r *http.Request) {
+	plainToken, err := GetRefreshTokenFromCookieOrAuthHeader(r)
+	if err != nil {
 		deleteRefreshTokenCookie(w)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusPreconditionFailed)
@@ -203,7 +210,7 @@ func (h IdentityHandler) TokenServiceExchangeToken(w http.ResponseWriter, r *htt
 	}
 
 	//TODO: when verify token compere rawToken and token in db, because kid may be same but token may not exists
-	result, err := h.userService.UserExchangeAccessToken(r.Context(), rawRefreshToken)
+	result, err := h.userService.UserExchangeAccessToken(r.Context(), plainToken)
 	if err != nil {
 		deleteRefreshTokenCookie(w)
 		w.Header().Set("Content-Type", "application/json")

@@ -2,7 +2,12 @@ import { type Handle, type HandleFetch, json, redirect } from '@sveltejs/kit';
 
 import { sequence } from '@sveltejs/kit/hooks';
 import { mapCookiesFromHeader } from '$lib/utils/cookie';
-import { REFRESH_TOKEN_ROUTE, VERIFY_ROUTE, _REFRESH_TOKEN } from '$lib';
+import { _REFRESH_TOKEN } from '$lib';
+
+import { env } from '$env/dynamic/private';
+
+const VERIFY_ROUTE = `${env.IDENTITY_SERVICE}/token-revocation:verify` as const;
+const REFRESH_TOKEN_ROUTE = `${env.IDENTITY_SERVICE}/access-token` as const;
 
 export const handleFetch: HandleFetch = (async ({ request, fetch, event: { cookies } }) => {
 	if (request.url === VERIFY_ROUTE || request.url === REFRESH_TOKEN_ROUTE) {
@@ -56,16 +61,23 @@ const setFreshAccessTokenFuncHook: Handle = async ({ resolve, event }): Promise<
 
 	event.locals.getAccessToken = async (): Promise<String | null> => {
 		try {
-			const response = await fetch(REFRESH_TOKEN_ROUTE, { method: 'PUT' });
+			const response = await fetch(REFRESH_TOKEN_ROUTE, {
+				method: 'PUT',
+			});
+
+			if (response.status != 201) {
+				throw new Error(await response.json())
+			}
 
 			const serverCookies = response.headers.get('set-cookie') as string;
 
 			await mapCookiesFromHeader(cookies, serverCookies);
 
-			const { access_token } = await response.json();
+			const result = await response.json();
 
-			return access_token;
+			return result.access_token;
 		} catch (e) {
+			console.log("Access token error", e)
 			return null;
 		}
 	};

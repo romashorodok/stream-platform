@@ -2,6 +2,8 @@ package identity
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	identitypb "github.com/romashorodok/stream-platform/gen/golang/identity/v1alpha"
 	"github.com/romashorodok/stream-platform/services/identity/internal/security"
@@ -62,10 +64,11 @@ func requireAuthMetaOnRequest(ctx context.Context, req interface{}, info *grpc.U
 		return nil, status.Error(codes.Internal, "Unable parse metadata for request.")
 	}
 
-	// TODO: old grpc generators don't have that var
-	// if info.FullMethod != identitypb.PublicKeyService_PublicKeyList_FullMethodName {
-	// 	return handler(ctx, req)
-	// }
+	pkeySvc := fmt.Sprintf("/%s", identitypb.PublicKeyService_ServiceDesc.ServiceName)
+
+	if strings.HasPrefix(info.FullMethod, pkeySvc) {
+		return handler(ctx, req)
+	}
 
 	if auth := meta.Get("authorization"); auth == nil || auth[0] == "" {
 		return nil, status.Error(codes.FailedPrecondition, "The route require authorization metadata")

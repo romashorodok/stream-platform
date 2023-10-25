@@ -1,6 +1,8 @@
-import { STREAM_CHANNELS_ROUTE } from "$lib"
 import type { Fetch } from "$lib/utils/fetch"
 import type { ServerLoad } from "@sveltejs/kit"
+import { env } from '$env/dynamic/private';
+
+const PRIVATE_STREAM_CHANNELS_ROUTE = `${env.STREAM_SERVICE}/stream-channels` as const;
 
 type Egress = {
 	egress: {
@@ -21,7 +23,7 @@ type ChannelsResponse = {
 
 async function loadChannels(fetch: Fetch): Promise<ChannelsResponse | null> {
 	try {
-		return await fetch(STREAM_CHANNELS_ROUTE).then(r => r.json());
+		return await fetch(PRIVATE_STREAM_CHANNELS_ROUTE).then(r => r.json());
 	} catch (_) {
 		return null;
 	}

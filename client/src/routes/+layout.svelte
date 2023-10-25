@@ -6,6 +6,7 @@
 	import { accessToken, canAccessProtectedRoutes } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
 	import Toast from '$lib/components/base/toast.svelte';
+	import { scheme } from '$lib/stores/theme';
 
 	onMount(() => {
 		const unsubscribe = accessToken.subscribe((token) => {
@@ -14,6 +15,10 @@
 
 		return unsubscribe;
 	});
+
+	onMount(() => {
+		scheme.dark();
+	})
 
 	async function dashboard() {
 		goto('/dashboard/user');

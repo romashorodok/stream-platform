@@ -21,8 +21,10 @@ message BroadcasterMeta {
 
 message IngestDeployed {
   bool deployed = 1;
-  BroadcasterMeta meta = 2;
-  repeated IngestEgress egresses = 3;
+  string namespace = 2;
+  string deployment = 3;
+  BroadcasterMeta meta = 4;
+  repeated IngestEgress egresses = 5;
 }
 
 message IngestDestroyed {

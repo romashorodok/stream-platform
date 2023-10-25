@@ -74,3 +74,12 @@ gnostic-protoc:
 openapi: gnostic-protoc
 	@echo "Generate openapi v3 spec..."
 	buf generate --template buf.gen.spec.yaml
+
+standalone-up:
+	REGISTRY=localhost:50000 docker-compose -f docker-compose.standalone.yml up
+
+standalone-down:
+	REGISTRY=localhost:50000 docker-compose -f docker-compose.standalone.yml down --rmi all --remove-orphans
+
+standalone-migrate:
+	REGISTRY=localhost:50000 docker-compose -f docker-compose.standalone.migrate.yml up

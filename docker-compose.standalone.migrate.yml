@@ -1,0 +1,23 @@
+version: "3.9"
+
+networks:
+  bridge:
+
+services:
+  migrate-identity:
+    image: ${REGISTRY}/cmd/migrate:latest
+    build:
+      target: migrate-builder
+    command: |
+      ./migrate '-db=postgres://user:password@identity-pg:5432/postgres?sslmode=disable' '-migrations=file://identity' up
+    networks:
+      - bridge
+
+  migrate-stream:
+    image: ${REGISTRY}/cmd/migrate:latest
+    build:
+      target: migrate-builder
+    command: |
+      ./migrate '-db=postgres://user:password@stream-pg:5432/postgres?sslmode=disable' '-migrations=file://stream' up
+    networks:
+      - bridge
