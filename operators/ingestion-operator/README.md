@@ -1,8 +1,15 @@
-# ingestion-operator
-// TODO(user): Add simple overview of use/purpose
-
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+Manage users ingests servers. Each user has their own ingest server, which process stream and deliver it to watchers.
+
+To achieve this, that user should start own server.
+
+## How it Works
+
+The operator has its own gRPC server worker. It takes user RPC call and start the server using a CRD template. 
+
+Also, it uses Istio to set up Envoy sidecar for the server.
+
+After everything is done, user's ingest should be accessible through Istio ingress, like this `http://adminuser.localhost:9092`  
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.

@@ -1,3 +1,4 @@
+<h2>A streaming platform where users host their live broadcasts.</h2>
 
 ### Build
 
@@ -24,11 +25,11 @@ Start broadcasting (In that case start ffmpeg) or use OBS 30.0.0 (at 1 Nov 2023 
 REGISTRY=localhost:50000 docker-compose -f docker-compose.webrtc.client.yml up
 ```
 
-Then go to `http://localhost:4173/login` and enter `adminuser` as **username** and **password**.
+Then go to [http://localhost:4173/login](http://localhost:4173/login) and enter `adminuser` as **username** and **password**.
 
-After that you can access the `http://localhost:4173/dashboard/user` and press `Go live` button.
+After that you can access the [http://localhost:4173/dashboard/user](http://localhost:4173/dashboard/user) and press `Go live` button.
 
-Now your stream available on home page or at `http://localhost:4173/s/adminuser`.
+Now your stream available on home page or at [http://localhost:4173/s/adminuser](http://localhost:4173/s/adminuser).
 
 ### Platform architecture
 
@@ -38,6 +39,7 @@ Now your stream available on home page or at `http://localhost:4173/s/adminuser`
 ![platform](./docs/diagram-platform.jpg)
 
 - More about ingest can be found at [services/ingest](https://github.com/romashorodok/stream-platform/tree/main/services/ingest)
+- More about operator can be found at [operators/ingestion-operator](https://github.com/romashorodok/stream-platform/tree/main/operators/ingestion-operator)
 
 #### Components
 - Ingest - the processing unit of broadcaster's stream</br>
