@@ -83,3 +83,6 @@ standalone-down:
 
 standalone-migrate:
 	REGISTRY=localhost:50000 docker-compose -f docker-compose.standalone.migrate.yml up
+
+webrtc-client:
+	REGISTRY=localhost:50000 docker-compose -f docker-compose.webrtc.client.yml up

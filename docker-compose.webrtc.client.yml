@@ -1,0 +1,14 @@
+version: "3.9"
+
+networks:
+  bridge:
+
+services:
+  webrtc-client:
+    image: ${REGISTRY}/services/ingest/webrtc-client:latest
+    build:
+      target: webrtc-client
+    environment:
+      WHIP_ENDPOINT: http://ingest:8089/api/ingress/whip
+    networks:
+      - bridge

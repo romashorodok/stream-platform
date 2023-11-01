@@ -87,7 +87,7 @@ RUN apkArch="$(apk --print-arch)"; \
 	aarch64) export GOARCH='arm64' ;; \
 	*) export GOARCH='amd64' ;; \
 	esac; \
-	CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o webrtc-client ./cmd/webrtc-client/main.go ./cmd/webrtc-client/start_ffmpeg.go
+	CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o webrtc-client ./cmd/webrtc-client-h264/main.go ./cmd/webrtc-client-h264/start_ffmpeg.go
 
 RUN apk add --no-cache ffmpeg
 RUN apk add font-jetbrains-mono-nerd
