@@ -2,26 +2,18 @@ package webrtcstatefulstream
 
 import (
 	"context"
-	"io"
 	"log"
 
 	"github.com/pion/webrtc/v3"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/media"
-	"github.com/romashorodok/stream-platform/services/ingest/internal/media/h264"
-	"github.com/romashorodok/stream-platform/services/ingest/internal/media/opus"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/media/rtp"
-	"github.com/romashorodok/stream-platform/services/ingest/internal/media/vp8"
 	"github.com/romashorodok/stream-platform/services/ingest/internal/mediaprocessor"
 	"go.uber.org/fx"
 )
 
 type WebrtcStatefulStream struct {
-	Audio           *webrtc.TrackLocalStaticRTP
-	Video           *webrtc.TrackLocalStaticRTP
-	audioPipeReader *io.PipeReader
-	audioPipeWriter *io.PipeWriter
-	videoPipeReader *io.PipeReader
-	videoPipeWriter *io.PipeWriter
+	Audio *webrtc.TrackLocalStaticRTP
+	Video *webrtc.TrackLocalStaticRTP
 
 	mediaProcessors []mediaprocessor.MediaProcessor
 }
@@ -32,12 +24,12 @@ func (s *WebrtcStatefulStream) Ingest(ctx context.Context) error {
 	ingestionCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	for _, processor := range s.mediaProcessors {
-		go func(processor mediaprocessor.MediaProcessor, video, audio *io.PipeReader) {
-			defer cancel()
-			_ = processor.Transcode(ingestionCtx, video, audio)
-		}(processor, s.videoPipeReader, s.audioPipeReader)
-	}
+	// for _, processor := range s.mediaProcessors {
+	// 	go func(processor mediaprocessor.MediaProcessor, video, audio *io.PipeReader) {
+	// 		defer cancel()
+	// 		_ = processor.Transcode(ingestionCtx, video, audio)
+	// 	}(processor, s.videoPipeReader, s.audioPipeReader)
+	// }
 
 	select {
 	case <-ctx.Done():
@@ -51,16 +43,16 @@ func (s *WebrtcStatefulStream) Ingest(ctx context.Context) error {
 func (s *WebrtcStatefulStream) PipeH264RemoteTrack(ctx context.Context, track *webrtc.TrackRemote) {
 	defer log.Println("[PipeH264RemoteTrack] canceled")
 
-	h264 := media.NewMuxerBuilder(rtp.NewRtpToRtpMuxerWriter(),
-		h264.NewRtpToH264MediaWriter(s.videoPipeWriter),
-	)
+	// h264 := media.NewMuxerBuilder(rtp.NewRtpToRtpMuxerWriter(),
+	// 	// h264.NewRtpToH264MediaWriter(s.videoPipeWriter),
+	// )
 
 	rtp := media.NewDemuxerBuilder(rtp.NewRtpTrackDemuxerReader(track),
 		rtp.NewRtpTrackWriter(s.Video),
-		media.NewTargetMediaWriter(h264),
+		// media.NewTargetMediaWriter(h264),
 	)
 
-	go h264.Mux()
+	// go h264.Mux()
 	go rtp.Demux()
 
 	select {
@@ -71,16 +63,16 @@ func (s *WebrtcStatefulStream) PipeH264RemoteTrack(ctx context.Context, track *w
 func (s *WebrtcStatefulStream) PipeVP8RemoteTrack(ctx context.Context, track *webrtc.TrackRemote) {
 	defer log.Println("[PipeVP8RemoteTrack] canceled")
 
-	vp8 := media.NewMuxerBuilder(vp8.NewRtpToWebmVP8Writer(),
-		media.NewTargetMediaWriter(s.videoPipeWriter),
-	)
+	// vp8 := media.NewMuxerBuilder(vp8.NewRtpToWebmVP8Writer(),
+	// 	media.NewTargetMediaWriter(s.videoPipeWriter),
+	// )
 
 	rtp := media.NewDemuxerBuilder(rtp.NewRtpTrackDemuxerReader(track),
 		rtp.NewRtpTrackWriter(s.Video),
-		media.NewTargetMediaWriter(vp8),
+		// media.NewTargetMediaWriter(vp8),
 	)
 
-	go vp8.Mux()
+	// go vp8.Mux()
 	go rtp.Demux()
 
 	select {
@@ -91,16 +83,16 @@ func (s *WebrtcStatefulStream) PipeVP8RemoteTrack(ctx context.Context, track *we
 func (s *WebrtcStatefulStream) PipeOpusRemoteTrack(ctx context.Context, track *webrtc.TrackRemote) {
 	defer log.Println("[PipeOpusRemoteTrack] canceled")
 
-	opus := media.NewMuxerBuilder(opus.NewRtpToWebmOpusWriter(),
-		media.NewTargetMediaWriter(s.audioPipeWriter),
-	)
+	// opus := media.NewMuxerBuilder(opus.NewRtpToWebmOpusWriter(),
+	// 	media.NewTargetMediaWriter(s.audioPipeWriter),
+	// )
 
 	rtp := media.NewDemuxerBuilder(rtp.NewRtpTrackDemuxerReader(track),
 		rtp.NewRtpTrackWriter(s.Audio),
-		media.NewTargetMediaWriter(opus),
+		// media.NewTargetMediaWriter(opus),
 	)
 
-	go opus.Mux()
+	// go opus.Mux()
 	go rtp.Demux()
 
 	select {
@@ -129,16 +121,16 @@ type WebrtcAllocatorFuncParams struct {
 
 func NewWebrtcAllocatorFunc(params WebrtcAllocatorFuncParams) WebrtcAllocatorFunc {
 	return func() (*WebrtcStatefulStream, error) {
-		audioPipeReader, audioPipeWriter := io.Pipe()
-		videoPipeReader, videoPipeWriter := io.Pipe()
+		// audioPipeReader, audioPipeWriter := io.Pipe()
+		// videoPipeReader, videoPipeWriter := io.Pipe()
 
 		return &WebrtcStatefulStream{
-			audioPipeReader: audioPipeReader,
-			audioPipeWriter: audioPipeWriter,
-			videoPipeReader: videoPipeReader,
-			videoPipeWriter: videoPipeWriter,
+			// audioPipeReader: audioPipeReader,
+			// audioPipeWriter: audioPipeWriter,
+			// videoPipeReader: videoPipeReader,
+			// videoPipeWriter: videoPipeWriter,
 			mediaProcessors: []mediaprocessor.MediaProcessor{
-				params.HLSMediaProcessor,
+				// params.HLSMediaProcessor,
 			},
 		}, nil
 	}

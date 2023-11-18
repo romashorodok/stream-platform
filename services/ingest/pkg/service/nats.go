@@ -31,8 +31,8 @@ func NewNatsConnection(config *NatsConfig) (*nats.Conn, error) {
 }
 
 var NatsModule = fx.Module("nats",
-	fx.Provide(
-		NewNatsConfig,
-		NewNatsConnection,
-	),
+	// fx.Provide(
+	// 	NewNatsConfig,
+	// 	NewNatsConnection,
+	// ),
 )
