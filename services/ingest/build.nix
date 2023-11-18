@@ -1,28 +1,24 @@
-{ stdenv, pkgs,  ... }:
+# https://nixos.org/manual/nixpkgs/stable/#var-stdenv-sourceRoot
+# https://nixos.org/manual/nixpkgs/stable/#sec-language-go
 
-stdenv.mkDerivation rec {
-  name = "ingest-${version}";
-  version = "1.0";
+{ stdenv, pkgs, buildGoModule, lib, ... }:
+let
+  hash = "sha256-kOHI8g/EV+kqgIiWhWZfgKc6/F5Jv3XAqqRoxp65L4k=";
 
-  src = ./../..;
+  # buildGoModule behave stdenv.mkDerivation but extended
+  ingest = buildGoModule rec {
+      version = "1.0";
+      src = ./../..;
+      name = "ingest-${version}";
 
-  buildInputs = with pkgs; [
-   go
-  ];
+      vendorHash = hash;
 
-  buildPhase = ''
-  export HOME=$(pwd)
-  cd ./services/ingest
+      sourceRoot = "stream-platform/services/ingest";
 
-  go build -o ingest ./cmd/ingest/main.go
-  	# CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o ingest ./cmd/ingest/main.go
-  '';
+      prePatch = ''
+      ls -f
+      '';
+  };
+in
+ingest
 
-  preInstall = ''
-  '';
-
-  installPhase = ''
-  mkdir $out
-  mv ingest $out/ingest
-  '';
-}
